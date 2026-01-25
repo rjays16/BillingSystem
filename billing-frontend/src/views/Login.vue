@@ -148,6 +148,7 @@ const handleLogin = async () => {
 
   try {
     await new Promise(resolve => setTimeout(resolve, 1000))
+    localStorage.setItem('isAuthenticated', 'true')
     router.push('/dashboard')
 
   } catch (err) {

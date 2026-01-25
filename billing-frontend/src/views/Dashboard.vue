@@ -5,6 +5,10 @@
       <p class="subtitle">Overview of your billing system</p>
     </header>
 
+    <button class="logout-btn" @click="logout">
+        Logout
+    </button>
+
     <section class="stats-grid">
       <div class="stat-card">
         <h3>Total Vendors</h3>
@@ -37,7 +41,16 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const logout = () => {
+  localStorage.removeItem('isAuthenticated')
+  router.push('/login')
+}
 </script>
+
 
 <style scoped>
 .dashboard-wrapper {
@@ -135,9 +148,33 @@
   color: #9ca3af;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: #111827;
+  color: #ffffff;
+}
+
+
 @media (max-width: 768px) {
   .dashboard-wrapper {
     padding: 2rem 1.5rem;
   }
 }
+
 </style>
