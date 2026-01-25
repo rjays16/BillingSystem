@@ -4,8 +4,16 @@ import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
 
 const routes = [
-  { path: '/', redirect: '/login' },
-  { path: '/login', name: 'Login', component: Login },
+  {
+    path: '/',
+    redirect: '/login',
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: { guestOnly: true },
+  },
   {
     path: '/dashboard',
     name: 'Dashboard',
@@ -19,17 +27,19 @@ const router = createRouter({
   routes,
 })
 
-// Auth Guard
+/* GLOBAL AUTH GUARD */
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if (to.path === '/login' && isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
+    return next('/login')
   }
+
+  if (to.meta.guestOnly && isAuthenticated) {
+    return next('/dashboard')
+  }
+
+  next()
 })
 
 export default router

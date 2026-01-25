@@ -1,48 +1,45 @@
 <template>
-  <div class="dashboard-wrapper">
-    <header class="dashboard-header">
-      <h1>Dashboard</h1>
-      <p class="subtitle">Overview of your billing system</p>
-    </header>
+  <AppLayout>
+    <div class="dashboard-wrapper">
+      <header class="dashboard-header">
+        <h1>Dashboard</h1>
+        <p class="subtitle">Overview of your billing system</p>
+      </header>
 
-    <button class="logout-btn" @click="logout">
-        Logout
-    </button>
+      <section class="stats-grid">
+        <div class="stat-card">
+          <h3>Total Vendors</h3>
+          <p class="stat-value">—</p>
+          <span class="stat-hint">Manage registered vendors</span>
+        </div>
 
-    <section class="stats-grid">
-      <div class="stat-card">
-        <h3>Total Vendors</h3>
-        <p class="stat-value">—</p>
-        <span class="stat-hint">Manage registered vendors</span>
-      </div>
+        <div class="stat-card">
+          <h3>Invoices</h3>
+          <p class="stat-value">—</p>
+          <span class="stat-hint">Track issued invoices</span>
+        </div>
 
-      <div class="stat-card">
-        <h3>Invoices</h3>
-        <p class="stat-value">—</p>
-        <span class="stat-hint">Track issued invoices</span>
-      </div>
+        <div class="stat-card">
+          <h3>Pending Payments</h3>
+          <p class="stat-value">—</p>
+          <span class="stat-hint">Invoices awaiting payment</span>
+        </div>
+      </section>
 
-      <div class="stat-card">
-        <h3>Pending Payments</h3>
-        <p class="stat-value">—</p>
-        <span class="stat-hint">Invoices awaiting payment</span>
-      </div>
-    </section>
-
-    <!-- Placeholder Content -->
-    <section class="content-section">
-      <h2>Activity</h2>
-      <div class="empty-state">
-        <p>No activity to display yet.</p>
-        <span>This section will show recent actions once data is available.</span>
-      </div>
-    </section>
-  </div>
+      <section class="content-section">
+        <h2>Activity</h2>
+        <div class="empty-state">
+          <p>No activity to display yet.</p>
+          <span>This section will show recent actions once data is available.</span>
+        </div>
+      </section>
+    </div>
+  </AppLayout>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
-
+import AppLayout from '../layouts/AppLayout.vue'
 const router = useRouter()
 
 const logout = () => {

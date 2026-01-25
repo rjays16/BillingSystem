@@ -1,4 +1,5 @@
 <template>
+  <AuthLayout>
   <div class="login-wrapper">
     <div class="login-card">
       <!-- Left Side - Form -->
@@ -77,9 +78,11 @@
       <div class="photo-section"></div>
     </div>
   </div>
+  </AuthLayout>
 </template>
 
 <script setup>
+import AuthLayout from '../layouts/AuthLayout.vue'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -172,13 +175,11 @@ const handleLogin = async () => {
 }
 
 .login-wrapper {
-  min-height: 100vh;
+  width: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  background: #f5f5f5;
-  padding: 2rem;
 }
+
 
 .login-card {
   display: flex;
