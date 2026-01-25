@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVICE=app
+
+run_artisan () {
+  docker compose exec $SERVICE php artisan "$@"
+}
+
+case "$1" in
+  artisan)
+    shift
+    run_artisan "$@"
+    ;;
+
+  make:model)
+    run_artisan make:model "$2" -m
+    ;;
+
+  make:controller)
+    run_artisan make:controller "$2" --api
+    ;;
+
+  make:request)
+    run_artisan make:request "$2"
+    ;;
+
+  make:resource)
+    run_artisan make:resource "$2"
+    ;;
+
+  make:service)
+    mkdir -p app/Services
+    touch app/Services/"$2".php
+    echo "<?php
+
+namespace App\Services;
+
+class $2
+{
+}
+" > app/Services/"$2".php
+    echo "Service created: app/Services/$2.php"
+    ;;
+
+  make:repository)
+    mkdir -p app/Repositories
+    touch app/Repositories/"$2".php
+    echo "<?php
+
+namespace App\Repositories;
+
+class $2
+{
+}
+" > app/Repositories/"$2".php
+    echo "Repository created: app/Repositories/$2.php"
+    ;;
+
+  migrate)
+    run_artisan migrate
+    ;;
+
+  migrate:fresh)
+    run_artisan migrate:fresh --seed
+    ;;
+
+  test)
+    run_artisan test
+    ;;
+
+  *)
+    echo "Available commands:"
+    echo "  ./run artisan <command>"
+    echo "  ./run make:model <Name>"
+    echo "  ./run make:controller <Name>"
+    echo "  ./run make:request <Name>"
+    echo "  ./run make:resource <Name>"
+    echo "  ./run make:service <Name>"
+    echo "  ./run make:repository <Name>"
+    echo "  ./run migrate"
+    echo "  ./run migrate:fresh"
+    echo "  ./run test"
+    exit 1
+    ;;
+esac
