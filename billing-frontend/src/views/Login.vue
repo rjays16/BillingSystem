@@ -81,6 +81,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const form = reactive({
   email: '',
@@ -88,6 +89,7 @@ const form = reactive({
   remember: false,
 })
 
+const router = useRouter()
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -135,24 +137,26 @@ const validatePassword = () => {
 const handleLogin = async () => {
   const isEmailValid = validateEmail()
   const isPasswordValid = validatePassword()
-  
+
   if (!isEmailValid || !isPasswordValid) {
     error.value = 'Please correct the errors above'
     return
   }
-  
+
   error.value = ''
   loading.value = true
-  
+
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    throw new Error('Invalid email or password')
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    router.push('/dashboard')
+
   } catch (err) {
-    error.value = err.message
+    error.value = 'Invalid email or password'
   } finally {
     loading.value = false
   }
 }
+
 </script>
 
 <style scoped>
