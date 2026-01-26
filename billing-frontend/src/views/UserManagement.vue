@@ -50,10 +50,15 @@
             </td>
             <td>{{ user.joinedDate }}</td>
             <td class="actions">
-              <button @click="editUser(user)">Edit</button>
               <button 
-                v-if="user.id !== 1" 
-                class="danger" 
+                @click="editUser(user)" 
+                class="btn-action edit-btn"
+              >
+                Edit
+              </button>
+              <button 
+                v-if="user.id !== authStore.user?.id" 
+                class="btn-action danger-btn" 
                 @click="askDeleteUser(user)"
               >
                 Delete
@@ -71,6 +76,7 @@
     <UserForm
       v-if="showUserForm"
       :user="selectedUser"
+      :organizations="organizationStore.allOrganizations"
       @save="saveUser"
       @close="closeUserForm"
     />
@@ -91,6 +97,8 @@ import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
 import { useToast } from '../composables/useToast'
+import UserForm from '../components/UserForm.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
@@ -166,11 +174,76 @@ const showConfirm = ref(false)
 const selectedUser = ref(null)
 const userToDelete = ref(null)
 
+const users = ref([
+  { 
+    id: 1, 
+    name: 'Allan Admin', 
+    email: 'allan@example.com',
+    role: 'admin', 
+    status: 'active', 
+    joinedDate: '2024-01-15',
+    organization_id: 1,
+    organization: 'Department of Health'
+  },
+  { 
+    id: 2, 
+    name: 'Rjay Accountant', 
+    email: 'accountant@example.com',
+    role: 'accountant', 
+    status: 'active', 
+    joinedDate: '2024-01-20',
+    organization_id: 1,
+    organization: 'Department of Health'
+  },
+  { 
+    id: 3, 
+    name: 'Allan Condiman', 
+    email: 'allan@doh.gov.ph',
+    role: 'accountant', 
+    status: 'active', 
+    joinedDate: '2024-02-01',
+    organization_id: 1,
+    organization: 'Department of Health'
+  },
+  
+  { 
+    id: 4, 
+    name: 'Coco martin', 
+    email: 'coco@example.com',
+    role: 'admin', 
+    status: 'active', 
+    joinedDate: '2024-01-20',
+    organization_id: 2,
+    organization: 'Bureau of Internal Revenue'
+  },
+  { 
+    id: 5, 
+    name: 'Sheena Catacutan', 
+    email: 'sheena.catacutan@bir.gov.ph',
+    role: 'accountant', 
+    status: 'inactive', 
+    joinedDate: '2024-03-10',
+    organization_id: 2,
+    organization: 'Bureau of Internal Revenue'
+  },
+  
+  { 
+    id: 6, 
+    name: 'Aljun Condiman', 
+    email: 'aljun.condiman@sss.gov.ph',
+    role: 'accountant', 
+    status: 'active', 
+    joinedDate: '2024-01-25',
+    organization_id: 3,
+    organization: 'Social Security System'
+  }
+])
+
 // Filter users by current organization
 const organizationUsers = computed(() => {
   if (!organizationStore.currentOrganization) return []
   
-  return allUsers.filter(user => 
+  return users.value.filter(user => 
     user.organization_id === organizationStore.currentOrganization.id
   )
 })
@@ -196,8 +269,25 @@ const closeUserForm = () => {
 
 const saveUser = (userData) => {
   if (selectedUser.value) {
-    show('User updated successfully', 'success')
+   
+    const index = users.value.findIndex(u => u.id === selectedUser.value.id)
+    if (index !== -1) {
+      users.value[index] = {
+        ...users.value[index],
+        ...userData,
+        organization: getOrganizationName(userData.organization_id)
+      }
+      show('User updated successfully', 'success')
+    }
   } else {
+    const newUser = {
+      id: Date.now(),
+      ...userData,
+      status: 'active',
+      joinedDate: new Date().toISOString().split('T')[0],
+      organization: getOrganizationName(userData.organization_id)
+    }
+    users.value.push(newUser)
     show('User added successfully', 'success')
   }
   closeUserForm()
@@ -209,14 +299,22 @@ const askDeleteUser = (user) => {
 }
 
 const confirmDeleteUser = () => {
-  show('User deleted successfully', 'error')
-  userToDelete.value = null
-  showConfirm.value = false
+  if (userToDelete.value) {
+    users.value = users.value.filter(u => u.id !== userToDelete.value.id)
+    show('User deleted successfully', 'error')
+    userToDelete.value = null
+    showConfirm.value = false
+  }
 }
 
 const cancelDeleteUser = () => {
   userToDelete.value = null
   showConfirm.value = false
+}
+
+const getOrganizationName = (orgId) => {
+  const org = organizationStore.getOrganizationById(orgId)
+  return org ? org.name : 'Unknown Organization'
 }
 </script>
 
@@ -350,18 +448,36 @@ const cancelDeleteUser = () => {
   gap: 0.5rem;
 }
 
-.actions button {
+.btn-action {
   font-size: 0.8rem;
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
   border: none;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.edit-btn {
   background: #667eea;
   color: white;
 }
 
-.actions button.danger {
+.edit-btn:hover {
+  background: #5a67d8;
+}
+
+.danger-btn {
   background: #ef4444;
+  color: white;
+}
+
+.danger-btn:hover {
+  background: #dc2626;
 }
 
 .btn.primary {
