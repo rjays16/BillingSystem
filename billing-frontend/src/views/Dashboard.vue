@@ -7,24 +7,25 @@
       </header>
 
       <section class="stats-grid">
-        <div class="stat-card">
-          <h3>Total Vendors</h3>
-          <p class="stat-value">—</p>
-          <span class="stat-hint">Manage registered vendors</span>
-        </div>
+      <div class="stat-card">
+        <h3>Total Vendors</h3>
+        <p class="stat-value">{{ stats.vendors }}</p>
+        <span class="stat-hint">Registered vendors</span>
+      </div>
 
-        <div class="stat-card">
-          <h3>Invoices</h3>
-          <p class="stat-value">—</p>
-          <span class="stat-hint">Track issued invoices</span>
-        </div>
+      <div class="stat-card">
+        <h3>Total Invoices</h3>
+        <p class="stat-value">{{ stats.invoices }}</p>
+        <span class="stat-hint">Issued invoices</span>
+      </div>
 
-        <div class="stat-card">
-          <h3>Pending Payments</h3>
-          <p class="stat-value">—</p>
-          <span class="stat-hint">Invoices awaiting payment</span>
-        </div>
-      </section>
+      <div class="stat-card">
+        <h3>Pending Payments</h3>
+        <p class="stat-value">{{ stats.pendingPayments }}</p>
+        <span class="stat-hint">Awaiting payment</span>
+      </div>
+    </section>
+
 
       <section class="content-section">
         <h2>Activity</h2>
@@ -40,7 +41,33 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
+import { ref } from 'vue'
+
 const router = useRouter()
+
+const stats = ref({
+  vendors: 12,
+  invoices: 48,
+  pendingPayments: 7,
+})
+
+const activities = ref([
+  {
+    id: 1,
+    message: 'Invoice #INV-001 created',
+    time: '2 hours ago',
+  },
+  {
+    id: 2,
+    message: 'Vendor ABC Corp added',
+    time: 'Yesterday',
+  },
+  {
+    id: 3,
+    message: 'Payment received for INV-003',
+    time: '2 days ago',
+  },
+])
 
 const logout = () => {
   localStorage.removeItem('isAuthenticated')
@@ -167,6 +194,28 @@ const logout = () => {
   color: #ffffff;
 }
 
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.activity-message {
+  font-weight: 500;
+  color: #374151;
+}
+
+.activity-time {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
 
 @media (max-width: 768px) {
   .dashboard-wrapper {

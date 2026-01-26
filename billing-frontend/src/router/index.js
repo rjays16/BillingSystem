@@ -8,6 +8,10 @@ import InvoiceView from '../views/InvoiceView.vue'
 
 const routes = [
   {
+    path: '/',
+    redirect: '/dashboard',
+  },
+  {
     path: '/login',
     component: Login,
     meta: { breadcrumb: 'Login' },
@@ -20,7 +24,7 @@ const routes = [
   {
     path: '/vendors',
     component: Vendors,
-    meta: { breadcrumb: 'Vendor' },
+    meta: { breadcrumb: 'Vendors' },
   },
   {
     path: '/invoices',
@@ -40,5 +44,23 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 })
+
+/*
+
+router.beforeEach((to, from, next) => {
+  const isAuthenticated =
+    localStorage.getItem('isAuthenticated') === 'true'
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return next('/login')
+  }
+
+  if (to.meta.guestOnly && isAuthenticated) {
+    return next('/dashboard')
+  }
+
+  next()
+})
+ */
 
 export default router
