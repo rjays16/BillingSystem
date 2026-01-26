@@ -5,6 +5,7 @@ import Dashboard from '../views/Dashboard.vue'
 import Vendors from '../views/Vendors.vue'
 import Invoices from '../views/Invoices.vue'
 import InvoiceView from '../views/InvoiceView.vue'
+import VendorView from '../views/VendorView.vue'
 
 const routes = [
   {
@@ -25,7 +26,15 @@ const routes = [
     path: '/vendors',
     component: Vendors,
     meta: { breadcrumb: 'Vendors' },
+    children: [
+      {
+        path: ':id',
+        component: VendorView,
+        meta: { breadcrumb: 'View' },
+      },
+    ],
   },
+  
   {
     path: '/invoices',
     component: Invoices,

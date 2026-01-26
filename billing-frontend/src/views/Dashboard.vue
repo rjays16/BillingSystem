@@ -2,79 +2,73 @@
   <AppLayout>
     <div class="dashboard-wrapper">
       <header class="dashboard-header">
-        <h1>Dashboard</h1>
-        <p class="subtitle">Overview of your billing system</p>
+        <div>
+          <h1>Dashboard</h1>
+          <p class="subtitle">Overview of your billing system</p>
+        </div>
       </header>
 
       <section class="stats-grid">
-      <div class="stat-card">
-        <h3>Total Vendors</h3>
-        <p class="stat-value">{{ stats.vendors }}</p>
-        <span class="stat-hint">Registered vendors</span>
-      </div>
+        <div class="stat-card">
+          <h3>Total Vendors</h3>
+          <p class="stat-value">{{ totalVendors }}</p>
+          <span class="stat-hint">Registered vendors</span>
+        </div>
 
-      <div class="stat-card">
-        <h3>Total Invoices</h3>
-        <p class="stat-value">{{ stats.invoices }}</p>
-        <span class="stat-hint">Issued invoices</span>
-      </div>
+        <div class="stat-card">
+          <h3>Total Invoices</h3>
+          <p class="stat-value">{{ totalInvoices }}</p>
+          <span class="stat-hint">Issued invoices</span>
+        </div>
 
-      <div class="stat-card">
-        <h3>Pending Payments</h3>
-        <p class="stat-value">{{ stats.pendingPayments }}</p>
-        <span class="stat-hint">Awaiting payment</span>
-      </div>
-    </section>
-
+        <div class="stat-card">
+          <h3>Pending Payments</h3>
+          <p class="stat-value">₱{{ pendingPayments.toLocaleString() }}</p>
+          <span class="stat-hint">Awaiting payment</span>
+        </div>
+      </section>
 
       <section class="content-section">
         <h2>Activity</h2>
-        <div class="empty-state">
+
+        <div v-if="activities.length === 0" class="empty-state">
           <p>No activity to display yet.</p>
           <span>This section will show recent actions once data is available.</span>
         </div>
+
+        <ul v-else class="activity-list">
+          <li v-for="activity in activities" :key="activity.id">
+            <span class="activity-message">{{ activity.message }}</span>
+            <span class="activity-time">{{ activity.time }}</span>
+          </li>
+        </ul>
       </section>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 import AppLayout from '../layouts/AppLayout.vue'
-import { ref } from 'vue'
+import { vendors, invoices } from '../data/mockData'
 
-const router = useRouter()
 
-const stats = ref({
-  vendors: 12,
-  invoices: 48,
-  pendingPayments: 7,
-})
+const totalVendors = computed(() => vendors.length)
+const totalInvoices = computed(() => invoices.length)
 
-const activities = ref([
-  {
-    id: 1,
-    message: 'Invoice #INV-001 created',
-    time: '2 hours ago',
-  },
-  {
-    id: 2,
-    message: 'Vendor ABC Corp added',
-    time: 'Yesterday',
-  },
-  {
-    id: 3,
-    message: 'Payment received for INV-003',
-    time: '2 days ago',
-  },
-])
+const pendingPayments = computed(() =>
+  invoices
+    .filter(inv => inv.status !== 'Paid')
+    .reduce((sum, inv) => sum + inv.amount, 0)
+)
 
-const logout = () => {
-  localStorage.removeItem('isAuthenticated')
-  router.push('/login')
-}
+
+const activities = [
+  { id: 1, message: 'Invoice INV-001 created', time: '2 hours ago' },
+  { id: 2, message: 'Vendor ABC Corp added', time: 'Yesterday' },
+  { id: 3, message: 'Payment received for INV-003', time: '2 days ago' },
+]
 </script>
-
 
 <style scoped>
 .dashboard-wrapper {
@@ -92,7 +86,6 @@ const logout = () => {
   font-size: 2rem;
   font-weight: 700;
   color: #111827;
-  margin-bottom: 0.25rem;
 }
 
 .subtitle {
@@ -124,14 +117,13 @@ const logout = () => {
   font-size: 0.9rem;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 0.75rem;
 }
 
 .stat-value {
   font-size: 2rem;
   font-weight: 700;
   color: #111827;
-  margin-bottom: 0.5rem;
+  margin: 0.5rem 0;
 }
 
 .stat-hint {
@@ -149,10 +141,10 @@ const logout = () => {
 .content-section h2 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
   margin-bottom: 1.25rem;
 }
 
+/* Activity */
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
@@ -161,37 +153,13 @@ const logout = () => {
 }
 
 .empty-state p {
-  font-size: 1rem;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 0.25rem;
 }
 
 .empty-state span {
   font-size: 0.85rem;
   color: #9ca3af;
-}
-
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logout-btn {
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background: transparent;
-  border: 1px solid #111827;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.logout-btn:hover {
-  background: #111827;
-  color: #ffffff;
 }
 
 .activity-list {
@@ -217,10 +185,10 @@ const logout = () => {
   color: #9ca3af;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .dashboard-wrapper {
     padding: 2rem 1.5rem;
   }
 }
-
 </style>
