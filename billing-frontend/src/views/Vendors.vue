@@ -1,45 +1,69 @@
 <template>
   <AppLayout>
-    <h1>Vendors</h1>
-    <p class="subtitle">Registered vendors</p>
+    <div class="page-header">
+      <div>
+        <h1>Vendors</h1>
+        <p class="subtitle">Registered vendors</p>
+      </div>
+
+      <button class="btn primary" @click="openAdd">
+        + Add Vendor
+      </button>
+    </div>
 
     <div class="table-wrapper">
-      <table class="vendor-table">
+      <table>
         <thead>
           <tr>
             <th>Vendor</th>
             <th>Email</th>
             <th>Phone</th>
-            <th>Total Invoices</th>
+            <th></th>
           </tr>
         </thead>
 
         <tbody>
-          <tr
-            v-for="vendor in vendors"
-            :key="vendor.id"
-            @click="goToVendor(vendor.id)"
-          >
+          <tr v-for="vendor in vendors" :key="vendor.id">
             <td>{{ vendor.name }}</td>
             <td>{{ vendor.email }}</td>
             <td>{{ vendor.phone }}</td>
-            <td>{{ vendor.invoices }}</td>
+            <td class="actions">
+              <button @click="editVendor(vendor)">Edit</button>
+              <button class="danger" @click="askDelete(vendor)">
+                Delete
+              </button>
+            </td>
+          </tr>
+
+          <tr v-if="vendors.length === 0">
+            <td colspan="4" class="empty">No vendors found</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Nested view -->
-    <RouterView />
+    <VendorForm
+      v-if="showForm"
+      :vendor="selectedVendor"
+      @save="saveVendor"
+      @close="closeForm"
+    />
+
+    <ConfirmModal
+      v-if="showConfirm"
+      title="Delete Vendor"
+      :message="`Are you sure you want to delete ${vendorToDelete?.name}?`"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </AppLayout>
 </template>
 
 <script setup>
-import AppLayout from '../layouts/AppLayout.vue'
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
+import AppLayout from '../layouts/AppLayout.vue'
+import VendorForm from '../components/VendorForm.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 const vendors = ref([
   {
@@ -47,64 +71,146 @@ const vendors = ref([
     name: 'ABC Corp',
     email: 'billing@abccorp.com',
     phone: '+63 912 345 6789',
-    invoices: 5,
   },
   {
     id: 2,
     name: 'XYZ Solutions',
     email: 'finance@xyz.com',
     phone: '+63 923 456 7890',
-    invoices: 3,
   },
   {
     id: 3,
     name: 'Delta Services',
     email: 'accounts@delta.com',
     phone: '+63 934 567 8901',
-    invoices: 8,
   },
 ])
 
-const goToVendor = (id) => {
-  router.push(`/vendors/${id}`)
+const showForm = ref(false)
+const showConfirm = ref(false)
+
+const selectedVendor = ref(null)
+const vendorToDelete = ref(null)
+
+const openAdd = () => {
+  selectedVendor.value = null
+  showForm.value = true
+}
+
+const editVendor = (vendor) => {
+  selectedVendor.value = { ...vendor } 
+  showForm.value = true
+}
+
+const closeForm = () => {
+  showForm.value = false
+  selectedVendor.value = null
+}
+
+const saveVendor = (data) => {
+  if (selectedVendor.value?.id) {
+    const index = vendors.value.findIndex(
+      v => v.id === selectedVendor.value.id
+    )
+    if (index !== -1) {
+      vendors.value[index] = {
+        ...vendors.value[index],
+        ...data,
+      }
+    }
+  } else {
+    vendors.value.push({
+      id: Date.now(),
+      ...data,
+    })
+  }
+
+  closeForm()
+}
+
+const askDelete = (vendor) => {
+  vendorToDelete.value = vendor
+  showConfirm.value = true
+}
+
+const confirmDelete = () => {
+  vendors.value = vendors.value.filter(
+    v => v.id !== vendorToDelete.value.id
+  )
+  vendorToDelete.value = null
+  showConfirm.value = false
+}
+
+const cancelDelete = () => {
+  vendorToDelete.value = null
+  showConfirm.value = false
 }
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 .subtitle {
   color: #6b7280;
-  margin-bottom: 1.5rem;
 }
 
 .table-wrapper {
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
-  overflow: hidden;
 }
 
-.vendor-table {
+table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.vendor-table th,
-.vendor-table td {
-  padding: 1rem 1.25rem;
-  text-align: left;
+th,
+td {
+  padding: 1rem;
 }
 
-.vendor-table thead {
+thead {
   background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
 }
 
-.vendor-table tbody tr {
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.vendor-table tbody tr:hover {
+tbody tr:hover {
   background: #f3f4f6;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+button {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+button.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn.primary {
+  background: #111827;
+  color: white;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
 }
 </style>

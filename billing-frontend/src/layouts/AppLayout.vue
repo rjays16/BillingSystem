@@ -57,7 +57,6 @@
         </div>
       </header>
 
-      <!-- Page Content -->
       <main class="main-content">
         <slot />
       </main>
@@ -274,7 +273,7 @@ const logout = () => {
   border-radius: 10px;
   min-width: 160px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
+  overflow: visible;
   z-index: 20;
 }
 
