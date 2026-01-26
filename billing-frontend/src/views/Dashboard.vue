@@ -6,6 +6,21 @@
           <h1>Dashboard</h1>
           <p class="subtitle">Overview of your billing system</p>
         </div>
+      
+        <div class="context-info">
+          <div class="org-info" v-if="organizationStore.currentOrganization">
+            <i class="bi bi-building"></i>
+            <div>
+              <div class="org-name">{{ organizationStore.organizationName }}</div>
+              <div class="user-welcome">
+                Welcome back, <strong>{{ authStore.userName }}</strong>
+                <span class="role-badge" :class="authStore.userRole">
+                  {{ authStore.userRole }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
       <section class="stats-grid">
@@ -25,6 +40,22 @@
           <h3>Pending Payments</h3>
           <p class="stat-value">₱{{ pendingPayments.toLocaleString() }}</p>
           <span class="stat-hint">Awaiting payment</span>
+        </div>
+      </section>
+
+      <section class="quick-actions-section" v-if="quickActions.length > 0">
+        <h2>Quick Actions</h2>
+        <div class="quick-actions-grid">
+          <div 
+            v-for="action in quickActions" 
+            :key="action.label"
+            class="action-card"
+            :class="{ disabled: action.disabled }"
+            @click="handleQuickAction(action)"
+          >
+            <i :class="action.icon"></i>
+            <span>{{ action.label }}</span>
+          </div>
         </div>
       </section>
 
@@ -48,10 +79,16 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
+import { useAuthStore } from '../stores/auth'
+import { useOrganizationStore } from '../stores/organization'
 import { vendors, invoices } from '../data/mockData'
 
+const router = useRouter()
+const authStore = useAuthStore()
+const organizationStore = useOrganizationStore()
 
 const totalVendors = computed(() => vendors.length)
 const totalInvoices = computed(() => invoices.length)
@@ -62,12 +99,44 @@ const pendingPayments = computed(() =>
     .reduce((sum, inv) => sum + inv.amount, 0)
 )
 
+// Role-based quick actions
+const quickActions = computed(() => {
+  if (authStore.isAdmin) {
+    return [
+      { label: 'Add Invoice', route: '/invoices', action: 'add', icon: 'bi-plus-circle' },
+      { label: 'Add Vendor', route: '/vendors', action: 'add', icon: 'bi-plus-circle' },
+      { label: 'Manage Users', route: '/users', icon: 'bi-people' },
+      { label: 'Organization Settings', route: '/settings', icon: 'bi-gear' },
+    ]
+  } else {
+    return [
+      { label: 'View Invoices', route: '/invoices', icon: 'bi-file-earmark-text' },
+      { label: 'View Vendors', route: '/vendors', icon: 'bi-people' },
+      { label: 'Reports', route: '#', icon: 'bi-bar-chart', disabled: true },
+    ]
+  }
+})
 
 const activities = [
   { id: 1, message: 'Invoice INV-001 created', time: '2 hours ago' },
   { id: 2, message: 'Vendor ABC Corp added', time: 'Yesterday' },
   { id: 3, message: 'Payment received for INV-003', time: '2 days ago' },
 ]
+
+onMounted(() => {
+  authStore.initializeAuth()
+  organizationStore.initializeOrganization()
+
+  if (!organizationStore.currentOrganization && authStore.user?.organization_id) {
+    organizationStore.setCurrentOrganizationByAuth(authStore)
+  }
+})
+
+const handleQuickAction = (action) => {
+  if (action.disabled) return
+  
+  router.push(action.route)
+}
 </script>
 
 <style scoped>
@@ -185,10 +254,155 @@ const activities = [
   color: #9ca3af;
 }
 
+.dashboard-header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.context-info {
+  text-align: right;
+}
+
+.org-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.org-info i {
+  font-size: 1.5rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+.org-info .org-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.user-welcome {
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-left: 0.5rem;
+}
+
+.role-badge.admin {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.role-badge.accountant {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.quick-actions-section {
+  margin-bottom: 3rem;
+}
+
+.quick-actions-section h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  color: #111827;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.action-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-card:hover:not(.disabled) {
+  border-color: #667eea;
+  background: #f8faff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.action-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.action-card i {
+  font-size: 1.25rem;
+  color: #667eea;
+}
+
+.action-card span {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .dashboard-wrapper {
     padding: 2rem 1.5rem;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+  
+  .context-info {
+    text-align: left;
+  }
+  
+  .org-info {
+    justify-content: center;
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

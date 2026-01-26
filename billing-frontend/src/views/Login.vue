@@ -83,8 +83,14 @@
 
 <script setup>
 import AuthLayout from '../layouts/AuthLayout.vue'
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { useOrganizationStore } from '../stores/organization'
+
+const authStore = useAuthStore()
+const organizationStore = useOrganizationStore()
+const router = useRouter()
 
 const form = reactive({
   email: '',
@@ -92,7 +98,6 @@ const form = reactive({
   remember: false,
 })
 
-const router = useRouter()
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -150,16 +155,34 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    localStorage.setItem('isAuthenticated', 'true')
-    router.push('/dashboard')
-
+    const result = await authStore.login(form)
+    
+    if (result.success) {
+      // Set organization context
+      organizationStore.setCurrentOrganizationByAuth(authStore)
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } else {
+      error.value = result.error || 'Invalid email or password'
+    }
   } catch (err) {
-    error.value = 'Invalid email or password'
+    error.value = 'Login failed. Please try again.'
   } finally {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  // Initialize auth state
+  authStore.initializeAuth()
+  organizationStore.initializeOrganization()
+  
+  // If already authenticated, redirect to dashboard
+  if (authStore.isAuthenticated) {
+    router.push('/dashboard')
+  }
+})
 
 </script>
 
@@ -453,6 +476,66 @@ const handleLogin = async () => {
   background-size: cover;
   background-position: center;
   min-height: 600px;
+}
+
+.demo-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.demo-section h4 {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.demo-credentials {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.demo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.demo-info {
+  flex: 1;
+}
+
+.demo-info strong {
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.demo-info small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.demo-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.demo-btn:hover {
+  background: #5a67d8;
 }
 
 @media (max-width: 991px) {

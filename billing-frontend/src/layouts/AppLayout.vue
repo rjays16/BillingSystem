@@ -21,6 +21,16 @@
           <i class="bi bi-file-earmark-text"></i>
           <span v-if="!collapsed">Invoices</span>
         </RouterLink>
+
+        <RouterLink 
+          v-if="authStore.isAdmin" 
+          to="/users" 
+          class="nav-link" 
+          active-class="active"
+        >
+          <i class="bi bi-people-fill"></i>
+          <span v-if="!collapsed">Users</span>
+        </RouterLink>
       </nav>
 
       <button class="collapse-btn" @click="toggleSidebar">
@@ -30,27 +40,48 @@
 
     <div class="main-area">
       <header class="topbar">
-        <nav class="breadcrumbs">
-          <RouterLink to="/dashboard" class="crumb">Home</RouterLink>
+        <div class="left-section">
+          <nav class="breadcrumbs">
+            <RouterLink to="/dashboard" class="crumb">Home</RouterLink>
 
-          <span
-            v-for="(crumb, index) in breadcrumbs"
-            :key="index"
-            class="crumb-wrapper"
-          >
-            <span class="separator">/</span>
-            <span class="crumb active">{{ crumb }}</span>
-          </span>
-        </nav>
+            <span
+              v-for="(crumb, index) in breadcrumbs"
+              :key="index"
+              class="crumb-wrapper"
+            >
+              <span class="separator">/</span>
+              <span class="crumb active">{{ crumb }}</span>
+            </span>
+          </nav>
+          
+          <div class="org-context" v-if="organizationStore.currentOrganization">
+            <i class="bi bi-building"></i>
+            <span class="org-name">{{ organizationStore.organizationName }}</span>
+            <span class="org-code">({{ organizationStore.organizationCode }})</span>
+          </div>
+        </div>
 
         <div class="topbar-spacer"></div>
         <div ref="userMenuRef" class="user-menu" @click.stop="toggleDropdown">
-          <div class="avatar">AJ</div>
+          <div class="avatar">{{ authStore.userAvatar }}</div>
+          <div class="user-info" v-if="!collapsed">
+            <div class="user-name">{{ authStore.userName }}</div>
+            <div class="user-role">{{ authStore.userRole }}</div>
+          </div>
           <i class="bi bi-chevron-down"></i>
 
           <div v-if="showDropdown" class="dropdown">
-            <button>Profile</button>
-            <button>Settings</button>
+            <div class="user-header">
+              <div class="dropdown-avatar">{{ authStore.userAvatar }}</div>
+              <div>
+                <div class="dropdown-name">{{ authStore.userName }}</div>
+                <div class="dropdown-role">{{ authStore.userRole }}</div>
+                <div class="dropdown-org">{{ organizationStore.organizationName }}</div>
+              </div>
+            </div>
+            <hr />
+            <button @click="goToProfile">Profile</button>
+            <button v-if="authStore.isAdmin" @click="goToSettings">Organization Settings</button>
             <hr />
             <button class="logout" @click="logout">Logout</button>
           </div>
@@ -67,9 +98,13 @@
 <script setup>
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { useOrganizationStore } from '../stores/organization'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
+const organizationStore = useOrganizationStore()
 
 const breadcrumbs = computed(() => {
   return route.matched.map((r) => {
@@ -116,9 +151,33 @@ onBeforeUnmount(() => {
 })
 
 const logout = () => {
-  localStorage.removeItem('isAuthenticated')
+  authStore.logout()
   router.push('/login')
 }
+
+const goToProfile = () => {
+  showDropdown.value = false
+  router.push('/profile')
+}
+
+const goToSettings = () => {
+  showDropdown.value = false
+  router.push('/settings')
+}
+
+onMounted(() => {
+  authStore.initializeAuth()
+  organizationStore.initializeOrganization()
+  
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  
+  if (!organizationStore.currentOrganization && authStore.user?.organization_id) {
+    organizationStore.setCurrentOrganizationByAuth(authStore)
+  }
+})
 </script>
 
 <style scoped>
@@ -218,6 +277,12 @@ const logout = () => {
   align-items: center;
 }
 
+.left-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .topbar-spacer {
   flex: 1;
 }
@@ -227,6 +292,31 @@ const logout = () => {
   align-items: center;
   font-size: 0.875rem;
   color: #6b7280;
+}
+
+.org-context {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #374151;
+  background: #f3f4f6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.org-context i {
+  color: #6b7280;
+}
+
+.org-name {
+  font-weight: 600;
+}
+
+.org-code {
+  color: #6b7280;
+  font-weight: 500;
 }
 
 .crumb {
@@ -251,6 +341,13 @@ const logout = () => {
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.user-menu:hover {
+  background: #f9fafb;
 }
 
 .avatar {
@@ -262,6 +359,28 @@ const logout = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1;
+  text-transform: capitalize;
 }
 
 .dropdown {
@@ -271,10 +390,49 @@ const logout = () => {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  min-width: 160px;
+  min-width: 220px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   overflow: visible;
   z-index: 20;
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdown-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #111827;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.dropdown-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.875rem;
+}
+
+.dropdown-role {
+  color: #6b7280;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.dropdown-org {
+  color: #374151;
+  font-size: 0.75rem;
+  margin-top: 0.125rem;
 }
 
 .dropdown button {
@@ -284,6 +442,7 @@ const logout = () => {
   border: none;
   text-align: left;
   cursor: pointer;
+  font-size: 0.875rem;
 }
 
 .dropdown button:hover {
