@@ -60,13 +60,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import AppLayout from '../layouts/AppLayout.vue'
 import VendorForm from '../components/VendorForm.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import { useToast } from '../composables/useToast'
-const { show } = useToast()
 
+const { show } = useToast()
+const setLoading = inject('setLoading')
 const vendors = ref([
   {
     id: 1,
@@ -100,7 +101,7 @@ const openAdd = () => {
 }
 
 const editVendor = (vendor) => {
-  selectedVendor.value = { ...vendor } 
+  selectedVendor.value = { ...vendor }
   showForm.value = true
 }
 
@@ -110,20 +111,35 @@ const closeForm = () => {
 }
 
 const saveVendor = (data) => {
-  if (selectedVendor.value) {
-    Object.assign(selectedVendor.value, data)
-    show('Vendor updated successfully', 'success')
-  } else {
-    vendors.value.push({
-      id: Date.now(),
-      ...data,
-    })
-    show('Vendor added successfully', 'success')
-  }
+  setLoading(true)
 
-  closeForm()
+  setTimeout(() => {
+    if (selectedVendor.value) {
+      const index = vendors.value.findIndex(
+        v => v.id === selectedVendor.value.id
+      )
+
+      if (index !== -1) {
+        vendors.value[index] = {
+          ...vendors.value[index],
+          ...data,
+        }
+      }
+
+      show('Vendor updated successfully', 'success')
+    } else {
+      vendors.value.push({
+        id: Date.now(),
+        ...data,
+      })
+
+      show('Vendor added successfully', 'success')
+    }
+
+    closeForm()
+    setLoading(false)
+  }, 800) 
 }
-
 
 const askDelete = (vendor) => {
   vendorToDelete.value = vendor
@@ -131,22 +147,27 @@ const askDelete = (vendor) => {
 }
 
 const confirmDelete = () => {
-  vendors.value = vendors.value.filter(
-    v => v.id !== vendorToDelete.value.id
-  )
+  setLoading(true)
 
-  show('Vendor deleted', 'error')
+  setTimeout(() => {
+    vendors.value = vendors.value.filter(
+      v => v.id !== vendorToDelete.value.id
+    )
 
-  vendorToDelete.value = null
-  showConfirm.value = false
+    show('Vendor deleted', 'error')
+
+    vendorToDelete.value = null
+    showConfirm.value = false
+    setLoading(false)
+  }, 700)
 }
-
 
 const cancelDelete = () => {
   vendorToDelete.value = null
   showConfirm.value = false
 }
 </script>
+
 
 <style scoped>
 .page-header {
