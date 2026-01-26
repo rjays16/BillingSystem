@@ -1,8 +1,16 @@
 <template>
   <AppLayout>
     <div v-if="!$route.params.id">
-      <h1>Invoices</h1>
-      <p class="subtitle">List of issued invoices</p>
+      <div class="page-header">
+        <div>
+          <h1>Invoices</h1>
+          <p class="subtitle">List of issued invoices</p>
+        </div>
+
+        <button class="btn primary" @click="openAdd">
+          + Add Invoice
+        </button>
+      </div>
 
       <div class="table-wrapper">
         <table class="invoice-table">
@@ -13,19 +21,16 @@
               <th>Amount</th>
               <th>Status</th>
               <th>Date</th>
+              <th></th>
             </tr>
           </thead>
 
           <tbody>
-            <tr
-              v-for="invoice in invoices"
-              :key="invoice.id"
-              @click="goToInvoice(invoice.id)"
-            >
-              <td>{{ invoice.number }}</td>
-              <td>{{ invoice.vendor }}</td>
-              <td>₱{{ invoice.amount.toLocaleString() }}</td>
-              <td>
+            <tr v-for="invoice in displayInvoices" :key="invoice.id">
+              <td @click="goToInvoice(invoice.id)" class="clickable">{{ invoice.number }}</td>
+              <td @click="goToInvoice(invoice.id)" class="clickable">{{ getVendorName(invoice.vendorId) }}</td>
+              <td @click="goToInvoice(invoice.id)" class="clickable">₱{{ invoice.amount.toLocaleString() }}</td>
+              <td @click="goToInvoice(invoice.id)" class="clickable">
                 <span
                   class="status"
                   :class="invoice.status.toLowerCase()"
@@ -33,28 +38,59 @@
                   {{ invoice.status }}
                 </span>
               </td>
-              <td>{{ invoice.date }}</td>
+              <td @click="goToInvoice(invoice.id)" class="clickable">{{ invoice.date }}</td>
+              <td class="actions">
+                <button @click="editInvoice(invoice)">Edit</button>
+                <button class="danger" @click="askDelete(invoice)">
+                  Delete
+                </button>
+              </td>
+            </tr>
+
+            <tr v-if="displayInvoices.length === 0">
+              <td colspan="6" class="empty">No invoices found</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <InvoiceForm
+        v-if="showForm"
+        :invoice="selectedInvoice"
+        @save="saveInvoice"
+        @close="closeForm"
+      />
+
+      <ConfirmModal
+        v-if="showConfirm"
+        title="Delete Invoice"
+        :message="`Are you sure you want to delete ${invoiceToDelete?.number}?`"
+        @confirm="confirmDelete"
+        @cancel="cancelDelete"
+      />
     </div>
     <RouterView />
   </AppLayout>
 </template>
 
 <script setup>
-import AppLayout from '../layouts/AppLayout.vue'
-import { ref } from 'vue'
+import { ref, inject, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import AppLayout from '../layouts/AppLayout.vue'
+import InvoiceForm from '../components/InvoiceForm.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
+import { useToast } from '../composables/useToast'
+import { vendors } from '../data/mockData'
 
 const router = useRouter()
+const { show } = useToast()
+const setLoading = inject('setLoading')
 
 const invoices = ref([
   {
     id: 1,
     number: 'INV-001',
-    vendor: 'ABC Corp',
+    vendorId: 1,
     amount: 15000,
     status: 'Paid',
     date: '2026-01-10',
@@ -62,7 +98,7 @@ const invoices = ref([
   {
     id: 2,
     number: 'INV-002',
-    vendor: 'XYZ Solutions',
+    vendorId: 2,
     amount: 8200,
     status: 'Pending',
     date: '2026-01-12',
@@ -70,15 +106,99 @@ const invoices = ref([
   {
     id: 3,
     number: 'INV-003',
-    vendor: 'Delta Services',
+    vendorId: 3,
     amount: 12350,
     status: 'Overdue',
     date: '2026-01-15',
   },
 ])
 
+const showForm = ref(false)
+const showConfirm = ref(false)
+const selectedInvoice = ref(null)
+const invoiceToDelete = ref(null)
+
+const displayInvoices = computed(() => invoices.value)
+
+const getVendorName = (vendorId) => {
+  const vendor = vendors.find(v => v.id === vendorId)
+  return vendor ? vendor.name : 'Unknown Vendor'
+}
+
 const goToInvoice = (id) => {
   router.push(`/invoices/${id}`)
+}
+
+const openAdd = () => {
+  selectedInvoice.value = null
+  showForm.value = true
+}
+
+const editInvoice = (invoice) => {
+  selectedInvoice.value = { ...invoice }
+  showForm.value = true
+}
+
+const closeForm = () => {
+  showForm.value = false
+  selectedInvoice.value = null
+}
+
+const saveInvoice = (data) => {
+  setLoading(true)
+
+  setTimeout(() => {
+    if (selectedInvoice.value) {
+      const index = invoices.value.findIndex(
+        inv => inv.id === selectedInvoice.value.id
+      )
+
+      if (index !== -1) {
+        invoices.value[index] = {
+          ...invoices.value[index],
+          ...data,
+        }
+      }
+
+      show('Invoice updated successfully', 'success')
+    } else {
+      invoices.value.push({
+        id: Date.now(),
+        ...data,
+      })
+
+      show('Invoice added successfully', 'success')
+    }
+
+    closeForm()
+    setLoading(false)
+  }, 800) 
+}
+
+const askDelete = (invoice) => {
+  invoiceToDelete.value = invoice
+  showConfirm.value = true
+}
+
+const confirmDelete = () => {
+  setLoading(true)
+
+  setTimeout(() => {
+    invoices.value = invoices.value.filter(
+      inv => inv.id !== invoiceToDelete.value.id
+    )
+
+    show('Invoice deleted', 'error')
+
+    invoiceToDelete.value = null
+    showConfirm.value = false
+    setLoading(false)
+  }, 700)
+}
+
+const cancelDelete = () => {
+  invoiceToDelete.value = null
+  showConfirm.value = false
 }
 </script>
 
@@ -88,11 +208,17 @@ const goToInvoice = (id) => {
   margin-bottom: 1.5rem;
 }
 
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 .table-wrapper {
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
-  overflow: hidden;
 }
 
 .invoice-table {
@@ -113,12 +239,15 @@ const goToInvoice = (id) => {
 }
 
 .invoice-table tbody tr {
-  cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .invoice-table tbody tr:hover {
   background: #f3f4f6;
+}
+
+.invoice-table .clickable {
+  cursor: pointer;
 }
 
 .status {
@@ -143,11 +272,49 @@ const goToInvoice = (id) => {
   color: #991b1b;
 }
 
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actions button {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.actions button.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn.primary {
+  background: #111827;
+  color: white;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn.primary:hover {
+  background: #1f2937;
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+}
+
 @media (max-width: 768px) {
   .invoice-table th:nth-child(3),
   .invoice-table td:nth-child(3),
-  .invoice-table th:nth-child(5),
-  .invoice-table td:nth-child(5) {
+  .invoice-table th:nth-child(6),
+  .invoice-table td:nth-child(6) {
     display: none;
   }
 }
