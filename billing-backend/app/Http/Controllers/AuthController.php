@@ -2,53 +2,41 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Organization;
-use Illuminate\Http\Request;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Resources\UserResource;
+use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private AuthService $authService
+    ) {}
+
     /**
      * Handle user login.
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        $validated = $request->validated();
+        
+        $user = $this->authService->authenticateUser(
+            $validated['email'], 
+            $validated['password']
+        );
 
-        $user = User::with('organization')
-            ->where('email', $request->email)
-            ->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        // Revoke existing tokens
-        $user->tokens()->delete();
-
-        // Create new token
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $token = $this->authService->createTokenForUser($user);
 
         return response()->json([
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'organization' => [
-                    'id' => $user->organization->id,
-                    'name' => $user->organization->name,
-                ],
-            ],
+            'user' => UserResource::make($user),
             'token' => $token,
         ]);
     }

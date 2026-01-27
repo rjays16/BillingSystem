@@ -119,30 +119,33 @@ import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
-import { vendors, invoices } from '../data/mockData'
+import { apiEndpoints } from '../services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
+const dashboardData = ref({})
 
-const mockInvoices = (() => {
-  const invoices = []
-  const statuses = ['Paid', 'Pending', 'Overdue']
-  
-  for (let i = 1; i <= 47; i++) {
-    let organizationId
-    if (i <= 20) {
-      organizationId = 1 
-    } else if (i <= 33) {
-      organizationId = 2  
-    } else {
-      organizationId = 3 
-    }
+const fetchDashboardData = async () => {
+  try {
+    // Fetch real data from API
+    const invoicesResponse = await apiEndpoints.getInvoices()
+    const organizationsResponse = await apiEndpoints.getOrganizations()
+    const usersResponse = await apiEndpoints.getCurrentUser()
     
-    invoices.push({
-      id: i,
-      number: `INV-${String(i).padStart(3, '0')}`,
-      vendorId: ((i - 1) % 3) + 1,
+    return {
+      invoices: invoicesResponse.data.data || [],
+      organizations: organizationsResponse.data || [],
+      currentUser: usersResponse.data.user || null,
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error)
+    return {
+      invoices: [],
+      organizations: [],
+      currentUser: null,
+    }
+  }
       organization_id: organizationId,
       amount: Math.floor(Math.random() * 50000) + 5000,
       status: statuses[Math.floor(Math.random() * statuses.length)],
@@ -157,13 +160,13 @@ const organizationInvoices = computed(() => {
   if (!organizationStore.currentOrganization) {
     return []
   }
-  return mockInvoices.filter(inv => 
+  return (dashboardData.value.invoices || []).filter(inv => 
     inv.organization_id === organizationStore.currentOrganization.id
   )
 })
 
 const totalVendors = computed(() => {
-  return vendors.length
+  return (dashboardData.value.organizations || []).length
 })
 
 const totalInvoices = computed(() => organizationInvoices.value.length)
@@ -212,13 +215,16 @@ const activities = [
   { id: 3, message: 'Payment received for INV-003', time: '2 days ago' },
 ]
 
-onMounted(() => {
+onMounted(async () => {
   authStore.initializeAuth()
   organizationStore.initializeOrganization()
 
   if (!organizationStore.currentOrganization && authStore.user?.organization_id) {
     organizationStore.setCurrentOrganizationByAuth(authStore)
   }
+
+  const data = await fetchDashboardData()
+  dashboardData.value = data
 })
 
 const handleQuickAction = (action) => {

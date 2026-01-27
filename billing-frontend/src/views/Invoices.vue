@@ -202,7 +202,7 @@ import AppLayout from '../layouts/AppLayout.vue'
 import InvoiceForm from '../components/InvoiceForm.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import { useToast } from '../composables/useToast'
-import { vendors } from '../data/mockData'
+import { apiEndpoints } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
 
