@@ -316,9 +316,6 @@ const submit = async () => {
       const today = new Date()
       const daysSinceInvoice = Math.floor((today - invoiceDate) / (1000 * 60 * 60 * 24))
       
-      if (daysSinceInvoice < 30) {
-        console.log('Invoice marked as overdue but is less than 30 days old')
-      }
     }
 
     await new Promise(resolve => setTimeout(resolve, 800))

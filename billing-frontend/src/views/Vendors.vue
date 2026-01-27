@@ -1,66 +1,70 @@
 <template>
   <AppLayout>
-    <div class="page-header">
-      <div>
-        <h1>Vendors</h1>
-        <p class="subtitle">Registered vendors</p>
+    <div v-if="!$route.params.id">
+      <div class="page-header">
+        <div>
+          <h1>Vendors</h1>
+          <p class="subtitle">Registered vendors</p>
+        </div>
+
+        <button class="btn primary" @click="openAdd">
+          + Add Vendor
+        </button>
       </div>
 
-      <button class="btn primary" @click="openAdd">
-        + Add Vendor
-      </button>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Vendor</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="vendor in vendors" :key="vendor.id" class="vendor-row" @click="goToVendor(vendor)">
+              <td>{{ vendor.name }}</td>
+              <td>{{ vendor.email }}</td>
+              <td>{{ vendor.phone }}</td>
+              <td class="actions" @click.stop.prevent>
+                <button @click="editVendor(vendor)">Edit</button>
+                <button class="danger" @click="askDelete(vendor)">
+                  Delete
+                </button>
+              </td>
+            </tr>
+
+            <tr v-if="vendors.length === 0">
+              <td colspan="4" class="empty">No vendors found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <VendorForm
+        v-if="showForm"
+        :vendor="selectedVendor"
+        @save="saveVendor"
+        @close="closeForm"
+      />
+
+      <ConfirmModal
+        v-if="showConfirm"
+        title="Delete Vendor"
+        :message="`Are you sure you want to delete ${vendorToDelete?.name}?`"
+        @confirm="confirmDelete"
+        @cancel="cancelDelete"
+      />
     </div>
-
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Vendor</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th></th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr v-for="vendor in vendors" :key="vendor.id">
-            <td>{{ vendor.name }}</td>
-            <td>{{ vendor.email }}</td>
-            <td>{{ vendor.phone }}</td>
-            <td class="actions">
-              <button @click="editVendor(vendor)">Edit</button>
-              <button class="danger" @click="askDelete(vendor)">
-                Delete
-              </button>
-            </td>
-          </tr>
-
-          <tr v-if="vendors.length === 0">
-            <td colspan="4" class="empty">No vendors found</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <VendorForm
-      v-if="showForm"
-      :vendor="selectedVendor"
-      @save="saveVendor"
-      @close="closeForm"
-    />
-
-    <ConfirmModal
-      v-if="showConfirm"
-      title="Delete Vendor"
-      :message="`Are you sure you want to delete ${vendorToDelete?.name}?`"
-      @confirm="confirmDelete"
-      @cancel="cancelDelete"
-    />
+    <RouterView />
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
 import VendorForm from '../components/VendorForm.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
@@ -68,6 +72,7 @@ import { useToast } from '../composables/useToast'
 
 const { show } = useToast()
 const setLoading = inject('setLoading')
+const router = useRouter()
 const vendors = ref([
   {
     id: 1,
@@ -103,6 +108,12 @@ const openAdd = () => {
 const editVendor = (vendor) => {
   selectedVendor.value = { ...vendor }
   showForm.value = true
+}
+
+const goToVendor = (vendor) => {
+  if (vendor && vendor.id) {
+    router.push(`/vendors/${vendor.id}`)
+  }
 }
 
 const closeForm = () => {
@@ -233,6 +244,35 @@ tbody tr:hover {
 .actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.vendor-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vendor-row:hover {
+  background: #f3f4f6;
+}
+
+.vendor-row td.clickable {
+  position: relative;
+}
+
+.vendor-row td.clickable:hover::after {
+  content: '→';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #667eea;
+  font-size: 0.8rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.vendor-row td.clickable:hover::after {
+  opacity: 1;
 }
 
 button {
