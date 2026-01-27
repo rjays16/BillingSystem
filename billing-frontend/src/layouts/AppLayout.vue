@@ -63,7 +63,7 @@
 
         <div class="topbar-spacer"></div>
 
-        <div class="org-switcher-wrapper" v-if="organizationStore.allOrganizations?.length > 1">
+        <div ref="orgSwitcherRef" class="org-switcher-wrapper" v-if="shouldShowOrgSwitcher">
           <div class="org-switcher" @click="toggleOrgSelector">
             <i class="bi bi-building"></i>
             <span>Switch Organization</span>
@@ -145,6 +145,7 @@ const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
 
 const userMenuRef = ref(null)
+const orgSwitcherRef = ref(null)
 const showDropdown = ref(false)
 const showOrgSelector = ref(false)
 const collapsed = ref(false)
@@ -158,6 +159,10 @@ const breadcrumbs = computed(() => {
       return r.meta?.breadcrumb
     })
     .filter(Boolean)
+})
+
+const shouldShowOrgSwitcher = computed(() => {
+  return organizationStore.allOrganizations?.length > 1
 })
 
 // Methods
@@ -195,8 +200,14 @@ const switchOrganization = (org) => {
 }
 
 const handleClickOutside = (event) => {
-  if (!userMenuRef.value?.contains(event.target)) {
+  const isOutsideUserMenu = !userMenuRef.value?.contains(event.target)
+  const isOutsideOrgSwitcher = !orgSwitcherRef.value?.contains(event.target)
+  
+  if (isOutsideUserMenu) {
     showDropdown.value = false
+  }
+  
+  if (isOutsideOrgSwitcher) {
     showOrgSelector.value = false
   }
 }
