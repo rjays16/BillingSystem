@@ -358,9 +358,7 @@ const cancelDelete = () => {
 
 @media (max-width: 768px) {
   .invoice-table th:nth-child(3),
-  .invoice-table td:nth-child(3),
-  .invoice-table th:nth-child(6),
-  .invoice-table td:nth-child(6) {
+  .invoice-table td:nth-child(3) {
     display: none;
   }
 }

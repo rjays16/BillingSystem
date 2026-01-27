@@ -260,4 +260,11 @@ button.danger {
   padding: 2rem;
   color: #9ca3af;
 }
+
+@media (max-width: 768px) {
+  table th:nth-child(3),
+  table td:nth-child(3) {
+    display: none;
+  }
+}
 </style>
