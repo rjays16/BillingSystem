@@ -144,10 +144,13 @@ const closeForm = () => {
   selectedInvoice.value = null
 }
 
-const saveInvoice = (data) => {
+const saveInvoice = async (data) => {
   setLoading(true)
 
-  setTimeout(() => {
+  try {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
     if (selectedInvoice.value) {
       const index = invoices.value.findIndex(
         inv => inv.id === selectedInvoice.value.id
@@ -157,22 +160,43 @@ const saveInvoice = (data) => {
         invoices.value[index] = {
           ...invoices.value[index],
           ...data,
+          updatedAt: new Date().toISOString()
         }
       }
 
       show('Invoice updated successfully', 'success')
     } else {
-      invoices.value.push({
+      // Check for duplicate invoice numbers
+      const existingInvoice = invoices.value.find(inv => 
+        inv.number.toLowerCase() === data.number.toLowerCase()
+      )
+      
+      if (existingInvoice) {
+        show('Invoice number already exists', 'error')
+        setLoading(false)
+        return
+      }
+
+      const newInvoice = {
         id: Date.now(),
         ...data,
-      })
-
-      show('Invoice added successfully', 'success')
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      invoices.value.push(newInvoice)
+      
+      // Show more detailed success message
+      show(`Invoice ${data.number} created successfully`, 'success')
     }
 
     closeForm()
+  } catch (error) {
+    console.error('Error saving invoice:', error)
+    show('Failed to save invoice. Please try again.', 'error')
+  } finally {
     setLoading(false)
-  }, 800) 
+  }
 }
 
 const askDelete = (invoice) => {
@@ -260,16 +284,38 @@ const cancelDelete = () => {
 .status.paid {
   background: #dcfce7;
   color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 .status.pending {
   background: #fef9c3;
   color: #854d0e;
+  border: 1px solid #fde68a;
 }
 
 .status.overdue {
   background: #fee2e2;
   color: #991b1b;
+  border: 1px solid #fecaca;
+  position: relative;
+}
+
+.status.overdue::before {
+  content: '!';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #991b1b;
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
 }
 
 .actions {

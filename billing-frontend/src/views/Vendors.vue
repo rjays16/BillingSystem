@@ -110,10 +110,12 @@ const closeForm = () => {
   selectedVendor.value = null
 }
 
-const saveVendor = (data) => {
+const saveVendor = async (data) => {
   setLoading(true)
 
-  setTimeout(() => {
+  try {
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
     if (selectedVendor.value) {
       const index = vendors.value.findIndex(
         v => v.id === selectedVendor.value.id
@@ -123,22 +125,45 @@ const saveVendor = (data) => {
         vendors.value[index] = {
           ...vendors.value[index],
           ...data,
+          updatedAt: new Date().toISOString()
         }
       }
 
       show('Vendor updated successfully', 'success')
     } else {
-      vendors.value.push({
+      const existingVendor = vendors.value.find(vendor => 
+        vendor.name.toLowerCase() === data.name.toLowerCase() ||
+        vendor.email.toLowerCase() === data.email.toLowerCase()
+      )
+      
+      if (existingVendor) {
+        if (existingVendor.name.toLowerCase() === data.name.toLowerCase()) {
+          show('Vendor with this name already exists', 'error')
+        } else {
+          show('Vendor with this email already exists', 'error')
+        }
+        setLoading(false)
+        return
+      }
+
+      const newVendor = {
         id: Date.now(),
         ...data,
-      })
-
-      show('Vendor added successfully', 'success')
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      vendors.value.push(newVendor)
+      show(`Vendor "${data.name}" added successfully`, 'success')
     }
 
     closeForm()
+  } catch (error) {
+    console.error('Error saving vendor:', error)
+    show('Failed to save vendor. Please try again.', 'error')
+  } finally {
     setLoading(false)
-  }, 800) 
+  }
 }
 
 const askDelete = (vendor) => {

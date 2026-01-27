@@ -239,7 +239,6 @@ const users = ref([
   }
 ])
 
-// Filter users by current organization
 const organizationUsers = computed(() => {
   if (!organizationStore.currentOrganization) return []
   
@@ -454,7 +453,6 @@ const getOrganizationName = (orgId) => {
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .btn-action:hover {
@@ -462,22 +460,9 @@ const getOrganizationName = (orgId) => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.edit-btn {
-  background: #667eea;
-  color: white;
-}
-
-.edit-btn:hover {
-  background: #5a67d8;
-}
-
 .danger-btn {
-  background: #ef4444;
-  color: white;
-}
-
-.danger-btn:hover {
-  background: #dc2626;
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .btn.primary {
@@ -488,6 +473,10 @@ const getOrganizationName = (orgId) => {
   border: none;
   cursor: pointer;
   font-weight: 600;
+}
+
+.btn.primary:hover {
+  background: #1f2937;
 }
 
 .empty {
