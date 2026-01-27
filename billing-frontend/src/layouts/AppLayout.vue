@@ -63,6 +63,14 @@
 
         <div class="topbar-spacer"></div>
 
+        <div class="session-warning" v-if="authStore.isSessionExpiring">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>Session expires in {{ Math.floor(authStore.sessionRemaining / (60 * 1000)) }} minutes</span>
+          <button @click="authStore.extendSession" class="btn-extend">
+            Extend
+          </button>
+        </div>
+
         <div ref="orgSwitcherRef" class="org-switcher-wrapper" v-if="shouldShowOrgSwitcher">
           <div class="org-switcher" @click="toggleOrgSelector">
             <i class="bi bi-building"></i>
@@ -130,6 +138,15 @@
         <slot />
       </main>
     </div>
+    
+    <ConfirmModal
+      v-if="showLogoutModal"
+      title="Confirm Logout"
+      message="Are you sure you want to logout?"
+      confirm-text="Logout"
+      @confirm="confirmLogout"
+      @cancel="cancelLogout"
+    />
   </div>
 </template>
 
@@ -138,6 +155,7 @@ import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
+import ConfirmModal from '../components/ConfirmModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -149,6 +167,7 @@ const orgSwitcherRef = ref(null)
 const showDropdown = ref(false)
 const showOrgSelector = ref(false)
 const collapsed = ref(false)
+const showLogoutModal = ref(false)
 
 const breadcrumbs = computed(() => {
   return route.matched
@@ -165,7 +184,6 @@ const shouldShowOrgSwitcher = computed(() => {
   return organizationStore.allOrganizations?.length > 1
 })
 
-// Methods
 const toggleSidebar = () => {
   collapsed.value = !collapsed.value
 }
@@ -180,8 +198,28 @@ const toggleOrgSelector = () => {
 }
 
 const logout = () => {
-  authStore.logout()
-  router.push('/login')
+  showLogoutModal.value = true
+  showDropdown.value = false
+}
+
+const confirmLogout = async () => {
+  showLogoutModal.value = false
+  
+  try {
+    const result = await authStore.logout()
+    
+    if (result.success) {
+      router.push('/login')
+    } else {
+      console.error('Logout failed:', result.error)
+    }
+  } catch (error) {
+    console.error('Logout error:', error)
+  }
+}
+
+const cancelLogout = () => {
+  showLogoutModal.value = false
 }
 
 const goToProfile = () => {
@@ -195,8 +233,15 @@ const goToSettings = () => {
 }
 
 const switchOrganization = (org) => {
+  if (org.id === organizationStore.currentOrganization?.id) {
+    showOrgSelector.value = false
+    return
+  }
+  
   organizationStore.setOrganization(org.id)
   showOrgSelector.value = false
+  
+  window.location.reload()
 }
 
 const handleClickOutside = (event) => {
@@ -212,6 +257,22 @@ const handleClickOutside = (event) => {
   }
 }
 
+let sessionTimeoutInterval = null
+
+const startSessionTimeoutCheck = () => {
+  if (sessionTimeoutInterval) {
+    clearInterval(sessionTimeoutInterval)
+  }
+  
+  sessionTimeoutInterval = setInterval(() => {
+    const remaining = authStore.checkSessionTimeout()
+    
+    if (remaining === false) {
+      router.push('/login')
+    }
+  }, 60 * 1000)
+}
+
 onMounted(() => {
   collapsed.value = localStorage.getItem('sidebar-collapsed') === 'true'
   document.addEventListener('click', handleClickOutside)
@@ -222,6 +283,8 @@ onMounted(() => {
   if (!organizationStore.currentOrganization && authStore.user?.organization_id) {
     organizationStore.setCurrentOrganizationByAuth(authStore)
   }
+  
+  startSessionTimeoutCheck()
 })
 
 watch(collapsed, (val) => {
@@ -230,6 +293,10 @@ watch(collapsed, (val) => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  
+  if (sessionTimeoutInterval) {
+    clearInterval(sessionTimeoutInterval)
+  }
 })
 </script>
 
@@ -341,6 +408,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
 }
 
 .left-section {
@@ -399,6 +467,39 @@ onBeforeUnmount(() => {
 .org-code {
   color: #6b7280;
   font-weight: 500;
+}
+
+.session-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid #fecaca;
+}
+
+.session-warning i {
+  font-size: 1.1rem;
+}
+
+.btn-extend {
+  background: #991b1b;
+  color: white;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-extend:hover {
+  background: #7f1d1d;
 }
 
 .org-switcher-wrapper {

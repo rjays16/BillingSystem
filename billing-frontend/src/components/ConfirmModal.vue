@@ -10,7 +10,7 @@
             Cancel
           </button>
           <button class="btn danger" @click="$emit('confirm')">
-            Delete
+            {{ confirmText }}
           </button>
         </div>
       </div>
@@ -27,6 +27,10 @@ defineProps({
   message: {
     type: String,
     default: 'Are you sure?',
+  },
+  confirmText: {
+    type: String,
+    default: 'Delete',
   },
 })
 
