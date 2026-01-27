@@ -16,7 +16,6 @@
         </button>
       </div>
 
-      <!-- Organization Context & Role Info -->
       <div class="context-bar" v-if="organizationStore.currentOrganization">
         <div class="org-context">
           <i class="bi bi-building"></i>
@@ -123,7 +122,6 @@
         </table>
       </div>
 
-      <!-- Pagination Controls -->
       <div class="pagination-wrapper" v-if="invoices.length > 0">
         <div class="pagination-info">
           <span>Showing {{ paginationInfo.showing }} results</span>
@@ -315,7 +313,6 @@ const paginationInfo = computed(() => {
   }
 })
 
-// Calculate which page numbers to show
 const displayedPages = computed(() => {
   const delta = 2
   const range = []
@@ -466,9 +463,20 @@ const changeItemsPerPage = (items) => {
   currentPage.value = 1 
 }
 
-// Watch for organization changes and reset pagination
+const resetToFirstPage = () => {
+  currentPage.value = 1
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = ''
+  currentPage.value = 1
+  show('Filters cleared', 'info')
+}
+
 watch(() => organizationStore.currentOrganization, () => {
   currentPage.value = 1
+  clearFilters()
 }, { deep: true })
 </script>
 
@@ -657,6 +665,108 @@ watch(() => organizationStore.currentOrganization, () => {
   border: 1px solid #e5e7eb;
 }
 
+.search-filter-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  flex: 1;
+  max-width: 400px;
+  transition: all 0.2s ease;
+}
+
+.search-box:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: #ffffff;
+}
+
+.search-box i {
+  color: #9ca3af;
+  font-size: 1rem;
+  margin-right: 0.75rem;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.search-box input::placeholder {
+  color: #9ca3af;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.filter-group select {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-results {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #0c4a6e;
+  font-weight: 500;
+}
+
+.search-results span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .pagination-wrapper {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -790,6 +900,27 @@ watch(() => organizationStore.currentOrganization, () => {
   
   .page-btn span {
     display: none;
+  }
+  
+  .search-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    max-width: 100%;
+  }
+  
+  .filter-controls {
+    justify-content: space-between;
+  }
+  
+  .filter-group {
+    flex: 1;
+  }
+  
+  .filter-group select {
+    width: 100%;
   }
 }
 </style>
