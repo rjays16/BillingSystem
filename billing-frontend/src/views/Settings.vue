@@ -23,29 +23,45 @@
         <section class="form-section">
           <h3>Basic Information</h3>
           <div class="form-grid">
-            <div class="form-group">
-              <label for="orgName">Organization Name *</label>
+            <div class="form-group" :class="{ 'has-error': errors.name }">
+              <label for="orgName" class="required-label">
+                Organization Name
+                <span class="required-asterisk">*</span>
+              </label>
               <input 
                 id="orgName"
                 v-model="formData.name" 
                 type="text" 
                 required
+                placeholder="Enter organization name"
                 :class="{ error: errors.name }"
+                @blur="validateField('name')"
               />
-              <span class="error-message" v-if="errors.name">{{ errors.name }}</span>
+              <span class="error-message" v-if="errors.name">
+                <i class="bi bi-exclamation-circle"></i>
+                {{ errors.name }}
+              </span>
             </div>
 
-            <div class="form-group">
-              <label for="orgCode">Organization Code *</label>
+            <div class="form-group" :class="{ 'has-error': errors.code }">
+              <label for="orgCode" class="required-label">
+                Organization Code
+                <span class="required-asterisk">*</span>
+              </label>
               <input 
                 id="orgCode"
                 v-model="formData.code" 
                 type="text" 
                 required
                 maxlength="10"
+                placeholder="e.g., DOH, BIR, SSS"
                 :class="{ error: errors.code }"
+                @blur="validateField('code')"
               />
-              <span class="error-message" v-if="errors.code">{{ errors.code }}</span>
+              <span class="error-message" v-if="errors.code">
+                <i class="bi bi-exclamation-circle"></i>
+                {{ errors.code }}
+              </span>
             </div>
 
             <div class="form-group full-width">
@@ -195,22 +211,42 @@ const loadCurrentOrganization = () => {
   }
 }
 
+const validateField = (field) => {
+  errors.value[field] = ''
+  
+  switch (field) {
+    case 'name':
+      if (!formData.value.name.trim()) {
+        errors.value.name = 'Organization name is required'
+      } else if (formData.value.name.trim().length < 2) {
+        errors.value.name = 'Name must be at least 2 characters'
+      }
+      break
+      
+    case 'code':
+      if (!formData.value.code.trim()) {
+        errors.value.code = 'Organization code is required'
+      } else if (formData.value.code.trim().length < 2) {
+        errors.value.code = 'Code must be at least 2 characters'
+      } else if (!/^[A-Z0-9]+$/.test(formData.value.code.trim())) {
+        errors.value.code = 'Code must contain only letters and numbers'
+      }
+      break
+      
+    case 'email':
+      if (formData.value.email && !isValidEmail(formData.value.email)) {
+        errors.value.email = 'Please enter a valid email address'
+      }
+      break
+  }
+}
+
 const validateForm = () => {
   errors.value = {}
   
-  if (!formData.value.name.trim()) {
-    errors.value.name = 'Organization name is required'
-  }
-  
-  if (!formData.value.code.trim()) {
-    errors.value.code = 'Organization code is required'
-  } else if (formData.value.code.length < 2) {
-    errors.value.code = 'Code must be at least 2 characters'
-  }
-  
-  if (formData.value.email && !isValidEmail(formData.value.email)) {
-    errors.value.email = 'Please enter a valid email address'
-  }
+  validateField('name')
+  validateField('code')
+  validateField('email')
   
   return Object.keys(errors.value).length === 0
 }
@@ -380,6 +416,27 @@ const resetForm = () => {
   font-weight: 600;
   color: #374151;
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.required-label {
+  color: #374151;
+}
+
+.required-asterisk {
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.form-group.has-error label {
+  color: #dc2626;
+}
+
+.form-group.has-error .required-asterisk {
+  animation: pulse 1s ease-in-out;
 }
 
 .form-group input,
@@ -417,6 +474,20 @@ const resetForm = () => {
   color: #dc2626;
   font-size: 0.8rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+.error-message i {
+  font-size: 0.85rem;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 .form-actions {

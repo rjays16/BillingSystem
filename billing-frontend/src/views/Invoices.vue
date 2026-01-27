@@ -471,7 +471,6 @@ const clearFilters = () => {
   searchQuery.value = ''
   statusFilter.value = ''
   currentPage.value = 1
-  show('Filters cleared', 'info')
 }
 
 watch(() => organizationStore.currentOrganization, () => {
