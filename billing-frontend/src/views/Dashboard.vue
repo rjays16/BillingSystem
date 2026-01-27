@@ -4,7 +4,7 @@
       <header class="dashboard-header">
         <div>
           <h1>Dashboard</h1>
-          <p class="subtitle">Overview of your billing system</p>
+          <p class="subtitle">Organization Overview - {{ organizationStore.organizationName }}</p>
         </div>
       
         <div class="context-info">
@@ -18,28 +18,63 @@
                   {{ authStore.userRole }}
                 </span>
               </div>
+              <div class="access-info">
+                <small>{{ authStore.isAdmin ? 'Full Access' : 'Read Only Access' }}</small>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <section class="stats-grid">
-        <div class="stat-card">
-          <h3>Total Vendors</h3>
-          <p class="stat-value">{{ totalVendors }}</p>
-          <span class="stat-hint">Registered vendors</span>
+      <section class="context-banner" v-if="organizationStore.currentOrganization">
+        <div class="banner-content">
+          <i class="bi bi-shield-check"></i>
+          <div>
+            <strong>Data Isolation Active</strong>
+            <span>Showing only {{ organizationStore.organizationName }} data</span>
+          </div>
         </div>
+        <div class="banner-stats">
+          <span>{{ totalInvoices }} invoices</span>
+          <span>₱{{ totalRevenue.toLocaleString() }} revenue</span>
+        </div>
+      </section>
 
+      <section class="stats-grid">
         <div class="stat-card">
           <h3>Total Invoices</h3>
           <p class="stat-value">{{ totalInvoices }}</p>
-          <span class="stat-hint">Issued invoices</span>
+          <span class="stat-hint">{{ organizationStore.organizationName }} invoices</span>
+        </div>
+
+        <div class="stat-card">
+          <h3>Paid Invoices</h3>
+          <p class="stat-value">{{ paidInvoices }}</p>
+          <span class="stat-hint">Completed payments</span>
         </div>
 
         <div class="stat-card">
           <h3>Pending Payments</h3>
           <p class="stat-value">₱{{ pendingPayments.toLocaleString() }}</p>
           <span class="stat-hint">Awaiting payment</span>
+        </div>
+
+        <div class="stat-card">
+          <h3>Overdue Invoices</h3>
+          <p class="stat-value" style="color: #dc2626;">{{ overdueInvoices }}</p>
+          <span class="stat-hint">Requires attention</span>
+        </div>
+
+        <div class="stat-card">
+          <h3>Total Revenue</h3>
+          <p class="stat-value" style="color: #059669;">₱{{ totalRevenue.toLocaleString() }}</p>
+          <span class="stat-hint">Collected payments</span>
+        </div>
+
+        <div class="stat-card">
+          <h3>Total Vendors</h3>
+          <p class="stat-value">{{ totalVendors }}</p>
+          <span class="stat-hint">Registered vendors</span>
         </div>
       </section>
 
@@ -90,29 +125,83 @@ const router = useRouter()
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
 
-const totalVendors = computed(() => vendors.length)
-const totalInvoices = computed(() => invoices.length)
+const mockInvoices = (() => {
+  const invoices = []
+  const statuses = ['Paid', 'Pending', 'Overdue']
+  
+  for (let i = 1; i <= 47; i++) {
+    let organizationId
+    if (i <= 20) {
+      organizationId = 1 
+    } else if (i <= 33) {
+      organizationId = 2  
+    } else {
+      organizationId = 3 
+    }
+    
+    invoices.push({
+      id: i,
+      number: `INV-${String(i).padStart(3, '0')}`,
+      vendorId: ((i - 1) % 3) + 1,
+      organization_id: organizationId,
+      amount: Math.floor(Math.random() * 50000) + 5000,
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      date: new Date(2026, 0, Math.floor(Math.random() * 27) + 1).toISOString().split('T')[0]
+    })
+  }
+  
+  return invoices.sort((a, b) => new Date(b.date) - new Date(a.date))
+})()
+
+const organizationInvoices = computed(() => {
+  if (!organizationStore.currentOrganization) {
+    return []
+  }
+  return mockInvoices.filter(inv => 
+    inv.organization_id === organizationStore.currentOrganization.id
+  )
+})
+
+const totalVendors = computed(() => {
+  return vendors.length
+})
+
+const totalInvoices = computed(() => organizationInvoices.value.length)
 
 const pendingPayments = computed(() =>
-  invoices
+  organizationInvoices.value
     .filter(inv => inv.status !== 'Paid')
     .reduce((sum, inv) => sum + inv.amount, 0)
 )
 
-// Role-based quick actions
+const paidInvoices = computed(() =>
+  organizationInvoices.value.filter(inv => inv.status === 'Paid').length
+)
+
+const overdueInvoices = computed(() =>
+  organizationInvoices.value.filter(inv => inv.status === 'Overdue').length
+)
+
+const totalRevenue = computed(() =>
+  organizationInvoices.value
+    .filter(inv => inv.status === 'Paid')
+    .reduce((sum, inv) => sum + inv.amount, 0)
+)
+
 const quickActions = computed(() => {
   if (authStore.isAdmin) {
     return [
-      { label: 'Add Invoice', route: '/invoices', action: 'add', icon: 'bi-plus-circle' },
+      { label: 'Create Invoice', route: '/invoices', action: 'add', icon: 'bi-plus-circle' },
       { label: 'Add Vendor', route: '/vendors', action: 'add', icon: 'bi-plus-circle' },
       { label: 'Manage Users', route: '/users', icon: 'bi-people' },
       { label: 'Organization Settings', route: '/settings', icon: 'bi-gear' },
+      { label: 'View Reports', route: '#', icon: 'bi-bar-chart', disabled: true },
     ]
   } else {
     return [
       { label: 'View Invoices', route: '/invoices', icon: 'bi-file-earmark-text' },
       { label: 'View Vendors', route: '/vendors', icon: 'bi-people' },
-      { label: 'Reports', route: '#', icon: 'bi-bar-chart', disabled: true },
+      { label: 'Download Reports', route: '#', icon: 'bi-download', disabled: true },
     ]
   }
 })
@@ -164,7 +253,7 @@ const handleQuickAction = (action) => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
   margin-bottom: 3rem;
 }
@@ -328,6 +417,70 @@ const handleQuickAction = (action) => {
   color: #1e40af;
 }
 
+.access-info {
+  margin-top: 0.25rem;
+}
+
+.access-info small {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.context-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.banner-content i {
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.75rem;
+  border-radius: 10px;
+}
+
+.banner-content div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.banner-content strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.banner-content span {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.banner-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-weight: 600;
+}
+
+.banner-stats span {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+}
+
 .quick-actions-section {
   margin-bottom: 3rem;
 }
@@ -399,6 +552,24 @@ const handleQuickAction = (action) => {
   
   .org-info {
     justify-content: center;
+  }
+  
+  .context-banner {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .banner-content {
+    justify-content: center;
+  }
+  
+  .banner-stats {
+    justify-content: center;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
   
   .quick-actions-grid {
