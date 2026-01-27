@@ -62,6 +62,42 @@
         </div>
 
         <div class="topbar-spacer"></div>
+
+        <div class="org-switcher-wrapper" v-if="organizationStore.allOrganizations?.length > 1">
+          <div class="org-switcher" @click="toggleOrgSelector">
+            <i class="bi bi-building"></i>
+            <span>Switch Organization</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          
+          <div v-if="showOrgSelector" class="org-dropdown" @click.stop>
+            <div class="org-dropdown-header">
+              <i class="bi bi-building"></i>
+              <span>Switch Organization</span>
+              <button @click="showOrgSelector = false" class="close-btn">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+            
+            <div class="org-list">
+              <div
+                v-for="org in organizationStore.allOrganizations"
+                :key="org.id"
+                class="org-option"
+                :class="{ active: org.id === organizationStore.currentOrganization?.id }"
+                @click="switchOrganization(org)"
+              >
+                <i class="bi bi-building"></i>
+                <div class="org-info">
+                  <div class="org-name">{{ org.name }}</div>
+                  <div class="org-code">{{ org.code }}</div>
+                </div>
+                <div class="org-description" v-if="org.description">{{ org.description }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div ref="userMenuRef" class="user-menu" @click.stop="toggleDropdown">
           <div class="avatar">{{ authStore.userAvatar }}</div>
           <div class="user-info" v-if="!collapsed">
@@ -76,7 +112,9 @@
               <div>
                 <div class="dropdown-name">{{ authStore.userName }}</div>
                 <div class="dropdown-role">{{ authStore.userRole }}</div>
-                <div class="dropdown-org">{{ organizationStore.organizationName }}</div>
+                <div class="dropdown-org" v-if="organizationStore.currentOrganization">
+                  {{ organizationStore.currentOrganization.name }}
+                </div>
               </div>
             </div>
             <hr />
@@ -106,49 +144,35 @@ const route = useRoute()
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
 
-const breadcrumbs = computed(() => {
-  return route.matched.map((r) => {
-    if (r.path.includes(':id')) {
-      return `#${route.params.id}`
-    }
-    return r.meta?.breadcrumb
-  }).filter(Boolean)
-})
-
+const userMenuRef = ref(null)
+const showDropdown = ref(false)
+const showOrgSelector = ref(false)
 const collapsed = ref(false)
 
-onMounted(() => {
-  collapsed.value = localStorage.getItem('sidebar-collapsed') === 'true'
+const breadcrumbs = computed(() => {
+  return route.matched
+    .map((r) => {
+      if (r.path.includes(':id')) {
+        return `#${route.params.id}`
+      }
+      return r.meta?.breadcrumb
+    })
+    .filter(Boolean)
 })
 
-watch(collapsed, val => {
-  localStorage.setItem('sidebar-collapsed', val)
-})
-
+// Methods
 const toggleSidebar = () => {
   collapsed.value = !collapsed.value
 }
-
-const showDropdown = ref(false)
-const userMenuRef = ref(null)
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
 }
 
-const handleClickOutside = (e) => {
-  if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
-    showDropdown.value = false
-  }
+const toggleOrgSelector = () => {
+  showOrgSelector.value = !showOrgSelector.value
+  showDropdown.value = false
 }
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 
 const logout = () => {
   authStore.logout()
@@ -165,18 +189,36 @@ const goToSettings = () => {
   router.push('/settings')
 }
 
+const switchOrganization = (org) => {
+  organizationStore.setOrganization(org.id)
+  showOrgSelector.value = false
+}
+
+const handleClickOutside = (event) => {
+  if (!userMenuRef.value?.contains(event.target)) {
+    showDropdown.value = false
+    showOrgSelector.value = false
+  }
+}
+
 onMounted(() => {
+  collapsed.value = localStorage.getItem('sidebar-collapsed') === 'true'
+  document.addEventListener('click', handleClickOutside)
+  
   authStore.initializeAuth()
   organizationStore.initializeOrganization()
-  
-  if (!authStore.isAuthenticated) {
-    router.push('/login')
-    return
-  }
   
   if (!organizationStore.currentOrganization && authStore.user?.organization_id) {
     organizationStore.setCurrentOrganizationByAuth(authStore)
   }
+})
+
+watch(collapsed, (val) => {
+  localStorage.setItem('sidebar-collapsed', val)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -213,6 +255,10 @@ onMounted(() => {
   margin-bottom: 2rem;
 }
 
+.app-layout.collapsed .sidebar-brand span {
+  display: none;
+}
+
 .nav {
   display: flex;
   flex-direction: column;
@@ -229,6 +275,7 @@ onMounted(() => {
   text-decoration: none;
   color: #374151;
   font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .nav-link:hover {
@@ -244,8 +291,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-.app-layout.collapsed .nav-link span,
-.app-layout.collapsed .sidebar-brand span {
+.app-layout.collapsed .nav-link span {
   display: none;
 }
 
@@ -260,6 +306,14 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
   border-radius: 50%;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.collapse-btn:hover {
+  background: #f9fafb;
 }
 
 .main-area {
@@ -275,6 +329,7 @@ onMounted(() => {
   padding: 0 2rem;
   display: flex;
   align-items: center;
+  gap: 1rem;
 }
 
 .left-section {
@@ -292,6 +347,22 @@ onMounted(() => {
   align-items: center;
   font-size: 0.875rem;
   color: #6b7280;
+}
+
+.crumb {
+  text-decoration: none;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.crumb.active {
+  color: #111827;
+  font-weight: 600;
+}
+
+.separator {
+  margin: 0 0.5rem;
+  color: #9ca3af;
 }
 
 .org-context {
@@ -319,20 +390,132 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.crumb {
-  text-decoration: none;
-  color: #6b7280;
-  font-weight: 500;
+.org-switcher-wrapper {
+  position: relative;
 }
 
-.crumb.active {
-  color: #111827;
+.org-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.org-switcher:hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+}
+
+.org-switcher i:first-child {
+  font-size: 1.1rem;
+  color: #667eea;
+}
+
+.org-switcher span {
+  font-size: 0.9rem;
   font-weight: 600;
+  color: #374151;
 }
 
-.separator {
-  margin: 0 0.5rem;
-  color: #9ca3af;
+.org-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-width: 280px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+
+.org-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.org-dropdown-header i {
+  font-size: 1.1rem;
+  color: #667eea;
+}
+
+.org-dropdown-header span {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #111827;
+}
+
+.org-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.org-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.org-option:hover {
+  background: #f8faff;
+}
+
+.org-option.active {
+  background: #667eea;
+}
+
+.org-option.active .org-name,
+.org-option.active .org-code,
+.org-option.active .org-description {
+  color: #ffffff;
+}
+
+.org-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.org-info .org-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.org-info .org-code {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.org-description {
+  font-size: 0.75rem;
+  color: #6b7280;
+  padding-left: 1.75rem;
 }
 
 .user-menu {
@@ -392,7 +575,6 @@ onMounted(() => {
   border-radius: 10px;
   min-width: 220px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-  overflow: visible;
   z-index: 20;
 }
 
@@ -401,7 +583,6 @@ onMounted(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem;
-  border-bottom: 1px solid #f3f4f6;
 }
 
 .dropdown-avatar {
@@ -435,6 +616,12 @@ onMounted(() => {
   margin-top: 0.125rem;
 }
 
+.dropdown hr {
+  margin: 0;
+  border: none;
+  border-top: 1px solid #f3f4f6;
+}
+
 .dropdown button {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -443,6 +630,8 @@ onMounted(() => {
   text-align: left;
   cursor: pointer;
   font-size: 0.875rem;
+  color: #374151;
+  transition: background 0.2s ease;
 }
 
 .dropdown button:hover {
@@ -455,5 +644,6 @@ onMounted(() => {
 
 .main-content {
   padding: 2.5rem 3rem;
+  flex: 1;
 }
 </style>

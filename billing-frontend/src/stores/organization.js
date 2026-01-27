@@ -34,14 +34,14 @@ export const useOrganizationStore = defineStore('organization', {
         created_at: '2024-01-25'
       }
     ],
-    currentOrganization: null,
+    currentOrganization: null
   }),
 
   getters: {
     getCurrentOrganization: (state) => state.currentOrganization,
     organizationName: (state) => state.currentOrganization?.name || 'No Organization',
     organizationCode: (state) => state.currentOrganization?.code || 'N/A',
-    allOrganizations: (state) => state.organizations,
+    allOrganizations: (state) => state.organizations
   },
 
   actions: {
@@ -59,17 +59,29 @@ export const useOrganizationStore = defineStore('organization', {
       }
     },
 
-    // Get organization by ID
     getOrganizationById(id) {
       return this.organizations.find(org => org.id === id)
     },
 
-    // Initialize from localStorage
     initializeOrganization() {
       const stored = localStorage.getItem('current-organization')
       if (stored) {
-        this.currentOrganization = JSON.parse(stored)
+        try {
+          this.currentOrganization = JSON.parse(stored)
+        } catch (error) {
+          console.error('Error parsing stored organization:', error)
+          localStorage.removeItem('current-organization')
+        }
       }
+    },
+
+    switchOrganization(organizationId) {
+      this.setOrganization(organizationId)
+    },
+
+    clearOrganization() {
+      this.currentOrganization = null
+      localStorage.removeItem('current-organization')
     }
   }
 })
