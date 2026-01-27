@@ -32,6 +32,52 @@
         </div>
       </div>
 
+      <div class="search-filter-section">
+        <div class="search-controls">
+          <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input 
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search invoices by number or vendor..."
+              @input="resetToFirstPage"
+            />
+          </div>
+          
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label for="status-filter">Status:</label>
+              <select 
+                id="status-filter"
+                v-model="statusFilter"
+                @change="resetToFirstPage"
+              >
+                <option value="">All Status</option>
+                <option value="Paid">Paid</option>
+                <option value="Pending">Pending</option>
+                <option value="Overdue">Overdue</option>
+              </select>
+            </div>
+            
+            <button 
+              class="btn secondary"
+              @click="clearFilters"
+              v-if="hasActiveFilters"
+            >
+              <i class="bi bi-x-circle"></i>
+              Clear Filters
+            </button>
+          </div>
+        </div>
+        
+        <div class="search-results" v-if="searchQuery || statusFilter">
+          <span v-if="filteredInvoices.length === 0">No invoices found</span>
+          <span v-else>
+            Found {{ filteredInvoices.length }} invoice{{ filteredInvoices.length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      </div>
+
       <div class="table-wrapper">
         <table class="invoice-table">
           <thead>
@@ -203,7 +249,9 @@ const showConfirm = ref(false)
 const selectedInvoice = ref(null)
 const invoiceToDelete = ref(null)
 
-// Pagination state
+const searchQuery = ref('')
+const statusFilter = ref('')
+
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
@@ -219,9 +267,33 @@ const tenantFilteredInvoices = computed(() => {
   )
 })
 
-const roleFilteredInvoices = computed(() => {
-  return tenantFilteredInvoices.value
+const searchFilteredInvoices = computed(() => {
+  let filtered = tenantFilteredInvoices.value
+  
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(invoice => {
+      const invoiceMatch = invoice.number.toLowerCase().includes(query)
+      const vendor = vendors.find(v => v.id === invoice.vendorId)
+      const vendorMatch = vendor && vendor.name.toLowerCase().includes(query)
+      return invoiceMatch || vendorMatch
+    })
+  }
+  
+  if (statusFilter.value) {
+    filtered = filtered.filter(invoice => invoice.status === statusFilter.value)
+  }
+  
+  return filtered
 })
+
+const roleFilteredInvoices = computed(() => {
+  return searchFilteredInvoices.value
+})
+
+const hasActiveFilters = computed(() => searchQuery.value || statusFilter.value)
+
+const filteredInvoices = computed(() => searchFilteredInvoices.value)
 
 const paginatedInvoices = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
