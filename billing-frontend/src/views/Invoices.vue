@@ -54,6 +54,61 @@
         </table>
       </div>
 
+      <!-- Pagination Controls -->
+      <div class="pagination-wrapper" v-if="invoices.length > 0">
+        <div class="pagination-info">
+          <span>Showing {{ paginationInfo.showing }} results</span>
+        </div>
+        
+        <div class="pagination-controls">
+          <div class="items-per-page">
+            <label for="items-per-page">Show:</label>
+            <select 
+              id="items-per-page" 
+              v-model="itemsPerPage" 
+              @change="changeItemsPerPage(itemsPerPage)"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          
+          <div class="pagination-nav">
+            <button 
+              class="page-btn" 
+              @click="previousPage" 
+              :disabled="currentPage === 1"
+            >
+              <i class="bi bi-chevron-left"></i>
+              Previous
+            </button>
+            
+            <div class="page-numbers">
+              <button 
+                v-for="page in displayedPages" 
+                :key="page"
+                class="page-btn"
+                :class="{ active: page === currentPage }"
+                @click="goToPage(page)"
+              >
+                {{ page }}
+              </button>
+            </div>
+            
+            <button 
+              class="page-btn" 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+            >
+              Next
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <InvoiceForm
         v-if="showForm"
         :invoice="selectedInvoice"
@@ -86,39 +141,87 @@ const router = useRouter()
 const { show } = useToast()
 const setLoading = inject('setLoading')
 
-const invoices = ref([
-  {
-    id: 1,
-    number: 'INV-001',
-    vendorId: 1,
-    amount: 15000,
-    status: 'Paid',
-    date: '2026-01-10',
-  },
-  {
-    id: 2,
-    number: 'INV-002',
-    vendorId: 2,
-    amount: 8200,
-    status: 'Pending',
-    date: '2026-01-12',
-  },
-  {
-    id: 3,
-    number: 'INV-003',
-    vendorId: 3,
-    amount: 12350,
-    status: 'Overdue',
-    date: '2026-01-15',
-  },
-])
+const invoices = ref(generateMockInvoices())
+
+function generateMockInvoices() {
+  const statuses = ['Paid', 'Pending', 'Overdue']
+  const mockInvoices = []
+  
+  for (let i = 1; i <= 47; i++) {
+    mockInvoices.push({
+      id: i,
+      number: `INV-${String(i).padStart(3, '0')}`,
+      vendorId: ((i - 1) % 3) + 1,
+      amount: Math.floor(Math.random() * 50000) + 5000,
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      date: new Date(2026, 0, Math.floor(Math.random() * 27) + 1).toISOString().split('T')[0]
+    })
+  }
+  
+  return mockInvoices.sort((a, b) => new Date(b.date) - new Date(a.date))
+}
 
 const showForm = ref(false)
 const showConfirm = ref(false)
 const selectedInvoice = ref(null)
 const invoiceToDelete = ref(null)
 
-const displayInvoices = computed(() => invoices.value)
+// Pagination state
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+
+const totalPages = computed(() => Math.ceil(invoices.value.length / itemsPerPage.value))
+
+const paginatedInvoices = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return invoices.value.slice(start, end)
+})
+
+const displayInvoices = computed(() => paginatedInvoices.value)
+
+// Pagination info for display
+const paginationInfo = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value + 1
+  const end = Math.min(currentPage.value * itemsPerPage.value, invoices.value.length)
+  return {
+    start: invoices.value.length > 0 ? start : 0,
+    end: end,
+    total: invoices.value.length,
+    showing: invoices.value.length > 0 ? `${start}-${end} of ${invoices.value.length}` : '0 items'
+  }
+})
+
+// Calculate which page numbers to show
+const displayedPages = computed(() => {
+  const delta = 2
+  const range = []
+  const rangeWithDots = []
+  
+  for (
+    let i = Math.max(2, currentPage.value - delta);
+    i <= Math.min(totalPages.value - 1, currentPage.value + delta);
+    i++
+  ) {
+    range.push(i)
+  }
+  
+  if (currentPage.value - delta > 2) {
+    rangeWithDots.push(1, '...')
+  } else {
+    rangeWithDots.push(1)
+  }
+  
+  rangeWithDots.push(...range)
+  
+  if (currentPage.value + delta < totalPages.value - 1) {
+    rangeWithDots.push('...', totalPages.value)
+  } else if (totalPages.value > 1) {
+    rangeWithDots.push(totalPages.value)
+  }
+  
+  return totalPages.value === 1 ? [1] : rangeWithDots
+})
 
 const getVendorName = (vendorId) => {
   const vendor = vendors.find(v => v.id === vendorId)
@@ -223,6 +326,26 @@ const confirmDelete = () => {
 const cancelDelete = () => {
   invoiceToDelete.value = null
   showConfirm.value = false
+}
+
+// Pagination functions
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const previousPage = () => {
+  goToPage(currentPage.value - 1)
+}
+
+const nextPage = () => {
+  goToPage(currentPage.value + 1)
+}
+
+const changeItemsPerPage = (items) => {
+  itemsPerPage.value = items
+  currentPage.value = 1 
 }
 </script>
 
@@ -356,9 +479,138 @@ const cancelDelete = () => {
   color: #9ca3af;
 }
 
+.pagination-wrapper {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.pagination-info {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.items-per-page select {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.items-per-page select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  justify-content: center;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.page-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.page-btn.active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.page-btn.dots {
+  border: none;
+  background: none;
+  cursor: default;
+  padding: 0 0.5rem;
+}
+
+.page-btn i {
+  font-size: 0.875rem;
+}
+
 @media (max-width: 768px) {
   .invoice-table th:nth-child(3),
   .invoice-table td:nth-child(3) {
+    display: none;
+  }
+  
+  .pagination-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .pagination-controls {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  
+  .page-btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .page-btn span {
     display: none;
   }
 }
