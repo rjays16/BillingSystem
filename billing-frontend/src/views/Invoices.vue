@@ -7,9 +7,29 @@
           <p class="subtitle">List of issued invoices</p>
         </div>
 
-        <button class="btn primary" @click="openAdd">
+        <button 
+          v-if="authStore.isAdmin" 
+          class="btn primary" 
+          @click="openAdd"
+        >
           + Add Invoice
         </button>
+      </div>
+
+      <!-- Organization Context & Role Info -->
+      <div class="context-bar" v-if="organizationStore.currentOrganization">
+        <div class="org-context">
+          <i class="bi bi-building"></i>
+          <span>Showing invoices for: <strong>{{ organizationStore.organizationName }}</strong></span>
+        </div>
+        
+        <div class="role-context">
+          <i class="bi bi-shield-check"></i>
+          <span>Role: <strong :class="authStore.userRole">{{ authStore.userRole }}</strong></span>
+          <span class="access-level">
+            ({{ authStore.isAdmin ? 'Full Access' : 'Read Only' }})
+          </span>
+        </div>
       </div>
 
       <div class="table-wrapper">
@@ -39,11 +59,14 @@
                 </span>
               </td>
               <td @click="goToInvoice(invoice.id)" class="clickable">{{ invoice.date }}</td>
-              <td class="actions">
+              <td class="actions" v-if="authStore.isAdmin">
                 <button @click="editInvoice(invoice)">Edit</button>
                 <button class="danger" @click="askDelete(invoice)">
                   Delete
                 </button>
+              </td>
+              <td v-else class="actions">
+                <span class="readonly">View Only</span>
               </td>
             </tr>
 
@@ -129,17 +152,21 @@
 </template>
 
 <script setup>
-import { ref, inject, computed } from 'vue'
+import { ref, inject, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
 import InvoiceForm from '../components/InvoiceForm.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import { useToast } from '../composables/useToast'
 import { vendors } from '../data/mockData'
+import { useAuthStore } from '../stores/auth'
+import { useOrganizationStore } from '../stores/organization'
 
 const router = useRouter()
 const { show } = useToast()
 const setLoading = inject('setLoading')
+const authStore = useAuthStore()
+const organizationStore = useOrganizationStore()
 
 const invoices = ref(generateMockInvoices())
 
@@ -148,10 +175,20 @@ function generateMockInvoices() {
   const mockInvoices = []
   
   for (let i = 1; i <= 47; i++) {
+    let organizationId
+    if (i <= 20) {
+      organizationId = 1 
+    } else if (i <= 33) {
+      organizationId = 2   
+    } else {
+      organizationId = 3 
+    }
+    
     mockInvoices.push({
       id: i,
       number: `INV-${String(i).padStart(3, '0')}`,
       vendorId: ((i - 1) % 3) + 1,
+      organization_id: organizationId,
       amount: Math.floor(Math.random() * 50000) + 5000,
       status: statuses[Math.floor(Math.random() * statuses.length)],
       date: new Date(2026, 0, Math.floor(Math.random() * 27) + 1).toISOString().split('T')[0]
@@ -170,25 +207,39 @@ const invoiceToDelete = ref(null)
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
-const totalPages = computed(() => Math.ceil(invoices.value.length / itemsPerPage.value))
+const totalPages = computed(() => Math.ceil(roleFilteredInvoices.value.length / itemsPerPage.value))
+
+const tenantFilteredInvoices = computed(() => {
+  if (!organizationStore.currentOrganization) {
+    return []
+  }
+  
+  return invoices.value.filter(invoice => 
+    invoice.organization_id === organizationStore.currentOrganization.id
+  )
+})
+
+const roleFilteredInvoices = computed(() => {
+  return tenantFilteredInvoices.value
+})
 
 const paginatedInvoices = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
   const end = start + itemsPerPage.value
-  return invoices.value.slice(start, end)
+  return roleFilteredInvoices.value.slice(start, end)
 })
 
 const displayInvoices = computed(() => paginatedInvoices.value)
 
-// Pagination info for display
 const paginationInfo = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value + 1
-  const end = Math.min(currentPage.value * itemsPerPage.value, invoices.value.length)
+  const totalItems = roleFilteredInvoices.value.length
+  const start = totalItems > 0 ? (currentPage.value - 1) * itemsPerPage.value + 1 : 0
+  const end = Math.min(currentPage.value * itemsPerPage.value, totalItems)
   return {
-    start: invoices.value.length > 0 ? start : 0,
+    start: start,
     end: end,
-    total: invoices.value.length,
-    showing: invoices.value.length > 0 ? `${start}-${end} of ${invoices.value.length}` : '0 items'
+    total: totalItems,
+    showing: totalItems > 0 ? `${start}-${end} of ${totalItems}` : '0 items'
   }
 })
 
@@ -251,7 +302,6 @@ const saveInvoice = async (data) => {
   setLoading(true)
 
   try {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800))
     
     if (selectedInvoice.value) {
@@ -269,7 +319,6 @@ const saveInvoice = async (data) => {
 
       show('Invoice updated successfully', 'success')
     } else {
-      // Check for duplicate invoice numbers
       const existingInvoice = invoices.value.find(inv => 
         inv.number.toLowerCase() === data.number.toLowerCase()
       )
@@ -288,8 +337,6 @@ const saveInvoice = async (data) => {
       }
       
       invoices.value.push(newInvoice)
-      
-      // Show more detailed success message
       show(`Invoice ${data.number} created successfully`, 'success')
     }
 
@@ -328,7 +375,6 @@ const cancelDelete = () => {
   showConfirm.value = false
 }
 
-// Pagination functions
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
@@ -347,6 +393,11 @@ const changeItemsPerPage = (items) => {
   itemsPerPage.value = items
   currentPage.value = 1 
 }
+
+// Watch for organization changes and reset pagination
+watch(() => organizationStore.currentOrganization, () => {
+  currentPage.value = 1
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -477,6 +528,61 @@ const changeItemsPerPage = (items) => {
   text-align: center;
   padding: 2rem;
   color: #9ca3af;
+}
+
+.context-bar {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.org-context, .role-context {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.org-context i, .role-context i {
+  color: #667eea;
+  font-size: 1rem;
+}
+
+.org-context strong, .role-context strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.role-context strong.admin {
+  color: #059669;
+}
+
+.role-context strong.accountant {
+  color: #dc2626;
+}
+
+.access-level {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.readonly {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  font-style: italic;
+  padding: 0.375rem 0.75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 .pagination-wrapper {
