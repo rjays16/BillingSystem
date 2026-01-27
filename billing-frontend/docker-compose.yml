@@ -4,3 +4,9 @@ services:
     container_name: billing_frontend
     ports:
       - "3000:80"
+    networks:
+      - billing-network
+
+networks:
+  billing-network:
+    external: true

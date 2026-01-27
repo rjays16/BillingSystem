@@ -33,105 +33,75 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    login(credentials) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const mockUsers = [
-            { 
-              id: 1, 
-              email: 'admin@example.com',
-              password: 'admin123',
-              name: 'Allan Admin',
-              role: 'admin',
-              organization_id: 1 
-            },
-            { 
-              id: 2, 
-              email: 'accountant@example.com', 
-              password: 'acc123',
-              name: 'Rjay Accountant',
-              role: 'accountant',
-              organization_id: 1 
-            },
-            { 
-              id: 3, 
-              email: 'allan@doh.gov.ph', 
-              password: 'allan123',
-              name: 'Allan Condiman',
-              role: 'accountant',
-              organization_id: 1 
-            },
-            { 
-              id: 4, 
-              email: 'coco@bir.gov.ph', 
-              password: 'coco123',
-              name: 'Coco Martin',
-              role: 'admin',
-              organization_id: 2 
-            },
-            { 
-              id: 5, 
-              email: 'sheena.catacutan@bir.gov.ph', 
-              password: 'sheena123',
-              name: 'Sheena Catacutan',
-              role: 'accountant',
-              organization_id: 2 
-            },
-            { 
-              id: 6, 
-              email: 'aljun.condiman@sss.gov.ph', 
-              password: 'aljun123',
-              name: 'Aljun Condiman',
-              role: 'accountant',
-              organization_id: 3 
-            }
-          ]
+    async login(credentials) {
+      console.log('Auth store login called with:', credentials)
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(credentials)
+        })
 
-          const user = mockUsers.find(u => 
-            u.email === credentials.email && u.password === credentials.password
-          )
+        const data = await response.json()
+        console.log('API response:', { status: response.status, data })
 
-          if (user) {
-            this.user = { ...user }
-            this.token = 'mock-token-' + Date.now()
-            this.isAuthenticated = true
-            this.loginTime = Date.now()
-            localStorage.setItem('auth-user', JSON.stringify(this.user))
-            localStorage.setItem('auth-token', this.token)
-            localStorage.setItem('is-authenticated', 'true')
-            localStorage.setItem('session-start', this.loginTime.toString())
-            
-            resolve({ success: true, user })
-          } else {
-            resolve({ success: false, error: 'Invalid credentials' })
-          }
-        }, 1000)
-      })
+        if (response.ok) {
+          this.user = data.user
+          this.token = data.token
+          this.isAuthenticated = true
+          this.loginTime = Date.now()
+          localStorage.setItem('auth-user', JSON.stringify(this.user))
+          localStorage.setItem('auth-token', this.token)
+          localStorage.setItem('is-authenticated', 'true')
+          localStorage.setItem('session-start', this.loginTime.toString())
+          
+          return { success: true, user: data.user }
+        } else {
+          return { success: false, error: data.message || 'Login failed' }
+        }
+      } catch (error) {
+        console.error('Login error:', error)
+        return { success: false, error: 'Network error' }
+      }
     },
 
     async logout() {
       try {
-        // Clear auth state
+        if (this.token) {
+          await fetch('/api/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${this.token}`
+            }
+          })
+        }
+
         this.user = null
         this.token = null
         this.isAuthenticated = false
         this.loginTime = null
         
-        // Clear all localStorage auth data
         localStorage.removeItem('auth-user')
         localStorage.removeItem('auth-token')
         localStorage.removeItem('is-authenticated')
         localStorage.removeItem('session-start')
         
-        // Clear organization data
         localStorage.removeItem('current-organization')
-        
-        // Clear session storage
         sessionStorage.clear()
         
         return { success: true, message: 'Logged out successfully' }
       } catch (error) {
         console.error('Logout error:', error)
+        // Still clear local data even if backend call fails
+        this.user = null
+        this.token = null
+        this.isAuthenticated = false
+        this.loginTime = null
         return { success: false, error: 'Failed to logout properly' }
       }
     },

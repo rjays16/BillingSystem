@@ -54,8 +54,11 @@ export const useOrganizationStore = defineStore('organization', {
     },
 
     setCurrentOrganizationByAuth(authStore) {
-      if (authStore.user?.organization_id) {
-        this.setOrganization(authStore.user.organization_id)
+      console.log('Setting organization from auth:', authStore.user)
+      const orgId = authStore.user?.organization_id || authStore.user?.organization?.id
+      if (orgId) {
+        console.log('Found orgId:', orgId)
+        this.setOrganization(orgId)
       }
     },
 

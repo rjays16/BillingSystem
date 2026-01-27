@@ -2,7 +2,6 @@
   <AuthLayout>
   <div class="login-wrapper">
     <div class="login-card">
-      <!-- Left Side - Form -->
       <div class="form-section">
         <div class="brand-header">
           <div class="brand-logo">
@@ -74,7 +73,6 @@
         </form>
       </div>
 
-      <!-- Right Side - Photo -->
       <div class="photo-section"></div>
     </div>
   </div>
@@ -143,25 +141,27 @@ const validatePassword = () => {
 }
 
 const handleLogin = async () => {
+  console.log('handleLogin called', { email: form.email, password: '***' })
   const isEmailValid = validateEmail()
   const isPasswordValid = validatePassword()
 
   if (!isEmailValid || !isPasswordValid) {
+    console.log('Validation failed')
     error.value = 'Please correct the errors above'
     return
   }
 
+  console.log('Validation passed, calling login...')
   error.value = ''
   loading.value = true
 
   try {
     const result = await authStore.login(form)
+    console.log('Login result:', result)
     
     if (result.success) {
-      // Set organization context
       organizationStore.setCurrentOrganizationByAuth(authStore)
       
-      // Redirect to dashboard
       router.push('/dashboard')
     } else {
       error.value = result.error || 'Invalid email or password'
@@ -174,11 +174,9 @@ const handleLogin = async () => {
 }
 
 onMounted(() => {
-  // Initialize auth state
   authStore.initializeAuth()
   organizationStore.initializeOrganization()
   
-  // If already authenticated, redirect to dashboard
   if (authStore.isAuthenticated) {
     router.push('/dashboard')
   }
