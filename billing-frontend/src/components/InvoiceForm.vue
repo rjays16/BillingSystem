@@ -74,6 +74,7 @@
             <option value="Pending">Pending</option>
             <option value="Paid">Paid</option>
             <option value="Overdue">Overdue</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
           <span v-if="errors.status" class="error-text">{{ errors.status }}</span>
         </div>
@@ -161,8 +162,8 @@ const validateField = (field) => {
         errors.number = 'Invoice number must be at least 5 characters'
       } else if (trimmedNumber.length > 20) {
         errors.number = 'Invoice number must be less than 20 characters'
-      } else if (!/^[A-Z]{2,6}[-]?[A-Z0-9]{2,10}$/.test(trimmedNumber)) {
-        errors.number = 'Format: INV-001, ABC-12345, INV2023001 (letters, optional dash, numbers)'
+      } else if (!/^[A-Z]{2,6}-\d{4}-\d{3}$/.test(trimmedNumber)) {
+        errors.number = 'Format: PREFIX-YYYY-XXX (e.g. DOH-2024-001, INV-2025-010)'
       } else {
         errors.number = ''
       }
@@ -193,7 +194,7 @@ const validateField = (field) => {
     case 'status':
       if (!form.status) {
         errors.status = 'Please select a status'
-      } else if (!['Pending', 'Paid', 'Overdue'].includes(form.status)) {
+      } else if (!['Pending', 'Paid', 'Overdue', 'Cancelled'].includes(form.status)) {
         errors.status = 'Please select a valid status'
       } else {
         errors.status = ''
@@ -320,12 +321,15 @@ const submit = async () => {
 
     await new Promise(resolve => setTimeout(resolve, 800))
     
-    emit('save', { 
-      ...form,
-      number: form.number.trim().toUpperCase(), 
-      createdAt: props.invoice ? props.invoice.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    emit('save', {
+      number: form.number.trim().toUpperCase(),
+      vendor_id: Number(form.vendorId),
+      amount: form.amount,
+      status: form.status,
+      due_date: form.date,
+      invoice_date: form.date
     })
+
   } catch (error) {
     console.error('Error saving invoice:', error)
     

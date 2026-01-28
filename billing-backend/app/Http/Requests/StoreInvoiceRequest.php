@@ -26,7 +26,7 @@ class StoreInvoiceRequest extends FormRequest
             'vendor_id' => 'required|exists:vendors,id',
             'number' => 'required|string|max:255|unique:invoices,number',
             'amount' => 'required|numeric|min:0.01|max:999999999.99',
-            'status' => 'required|in:draft,sent,paid,overdue,cancelled',
+            'status' => 'required|in:Pending,Paid,Overdue,Cancelled',
             'date' => 'required|date',
             'due_date' => 'nullable|date|after_or_equal:date',
             'notes' => 'nullable|string|max:2000',
