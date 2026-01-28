@@ -141,23 +141,19 @@ const validatePassword = () => {
 }
 
 const handleLogin = async () => {
-  console.log('handleLogin called', { email: form.email, password: '***' })
   const isEmailValid = validateEmail()
   const isPasswordValid = validatePassword()
 
   if (!isEmailValid || !isPasswordValid) {
-    console.log('Validation failed')
     error.value = 'Please correct the errors above'
     return
   }
 
-  console.log('Validation passed, calling login...')
   error.value = ''
   loading.value = true
 
   try {
     const result = await authStore.login(form)
-    console.log('Login result:', result)
     
     if (result.success) {
       organizationStore.setCurrentOrganizationByAuth(authStore)
