@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
@@ -128,22 +128,20 @@ const dashboardData = ref({})
 
 const fetchDashboardData = async () => {
   try {
-    // Fetch real data from API
     const invoicesResponse = await apiEndpoints.getInvoices()
-    const organizationsResponse = await apiEndpoints.getOrganizations()
-    const usersResponse = await apiEndpoints.getCurrentUser()
+    await organizationStore.loadOrganizations()
     
     return {
-      invoices: invoicesResponse.data.data || [],
-      organizations: organizationsResponse.data || [],
-      currentUser: usersResponse.data.user || null,
+      invoices: invoicesResponse.data?.data || [],
+      organizations: organizationStore.organizations || [],
+      currentUser: authStore.user || null,
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
     return {
       invoices: [],
-      organizations: [],
-      currentUser: null,
+      organizations: organizationStore.organizations || [],
+      currentUser: authStore.user || null,
     }
   }
 }
@@ -208,16 +206,14 @@ const activities = [
 ]
 
 onMounted(async () => {
-  authStore.initializeAuth()
-  organizationStore.initializeOrganization()
-
-  if (!organizationStore.currentOrganization && authStore.user?.organization_id) {
-    organizationStore.setCurrentOrganizationByAuth(authStore)
+  await authStore.initializeAuth()
+  if (!authStore.isAuthenticated) {
+    return
   }
-
-  const data = await fetchDashboardData()
-  dashboardData.value = data
+  await organizationStore.initializeOrganization()
+  dashboardData.value = await fetchDashboardData()
 })
+
 
 const handleQuickAction = (action) => {
   if (action.disabled) return

@@ -109,7 +109,11 @@ router.beforeEach((to, from, next) => {
 
   // Initialize auth state
   authStore.initializeAuth()
-  organizationStore.initializeOrganization()
+  
+  // Only initialize organizations if user is authenticated
+  if (authStore.isAuthenticated) {
+    organizationStore.initializeOrganization()
+  }
 
   const isAuthenticated = authStore.isAuthenticated
   const userRole = authStore.userRole
@@ -128,7 +132,6 @@ router.beforeEach((to, from, next) => {
   if (to.meta.roles && isAuthenticated) {
     const hasRole = to.meta.roles.includes(userRole)
     if (!hasRole) {
-      // Redirect to dashboard if user doesn't have required role
       return next('/dashboard')
     }
   }
