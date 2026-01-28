@@ -85,7 +85,7 @@ The system implements organization-based multi-tenancy:
    ```bash
    cd billing-frontend
    npm install
-   npm run build
+   docker-compose up -d --build or npm run build
    cd ..
    ```
 
