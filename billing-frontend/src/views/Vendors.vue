@@ -63,36 +63,19 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
-import { useRouter } from 'vue-router'
-import AppLayout from '../layouts/AppLayout.vue'
-import VendorForm from '../components/VendorForm.vue'
-import ConfirmModal from '../components/ConfirmModal.vue'
-import { useToast } from '../composables/useToast'
+ import { ref, inject, onMounted } from 'vue'
+ import { useRouter } from 'vue-router'
+ import AppLayout from '../layouts/AppLayout.vue'
+ import VendorForm from '../components/VendorForm.vue'
+ import ConfirmModal from '../components/ConfirmModal.vue'
+ import { useToast } from '../composables/useToast'
+ import { useVendorStore } from '../stores/vendor'
 
-const { show } = useToast()
-const setLoading = inject('setLoading')
-const router = useRouter()
-const vendors = ref([
-  {
-    id: 1,
-    name: 'ABC Corp',
-    email: 'billing@abccorp.com',
-    phone: '+63 912 345 6789',
-  },
-  {
-    id: 2,
-    name: 'XYZ Solutions',
-    email: 'finance@xyz.com',
-    phone: '+63 923 456 7890',
-  },
-  {
-    id: 3,
-    name: 'Delta Services',
-    email: 'accounts@delta.com',
-    phone: '+63 934 567 8901',
-  },
-])
+ const { show } = useToast()
+ const setLoading = inject('setLoading')
+ const router = useRouter()
+ const vendorStore = useVendorStore()
+ const vendors = ref([])
 
 const showForm = ref(false)
 const showConfirm = ref(false)
@@ -125,85 +108,76 @@ const saveVendor = async (data) => {
   setLoading(true)
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
     if (selectedVendor.value) {
-      const index = vendors.value.findIndex(
-        v => v.id === selectedVendor.value.id
-      )
-
-      if (index !== -1) {
-        vendors.value[index] = {
-          ...vendors.value[index],
-          ...data,
-          updatedAt: new Date().toISOString()
-        }
+      const result = await vendorStore.updateVendor(selectedVendor.value.id, data)
+      
+      if (result.success) {
+        show('Vendor updated successfully', 'success')
+        closeForm()
+      } else {
+        show(result.error || 'Failed to update vendor', 'error')
       }
-
-      show('Vendor updated successfully', 'success')
     } else {
-      const existingVendor = vendors.value.find(vendor => 
-        vendor.name.toLowerCase() === data.name.toLowerCase() ||
-        vendor.email.toLowerCase() === data.email.toLowerCase()
-      )
+      const result = await vendorStore.createVendor(data)
       
-      if (existingVendor) {
-        if (existingVendor.name.toLowerCase() === data.name.toLowerCase()) {
-          show('Vendor with this name already exists', 'error')
-        } else {
-          show('Vendor with this email already exists', 'error')
-        }
-        setLoading(false)
-        return
+      if (result.success) {
+        show('Vendor created successfully', 'success')
+        closeForm()
+      } else {
+        show(result.error || 'Failed to create vendor', 'error')
       }
-
-      const newVendor = {
-        id: Date.now(),
-        ...data,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      
-      vendors.value.push(newVendor)
-      show(`Vendor "${data.name}" added successfully`, 'success')
     }
-
-    closeForm()
   } catch (error) {
-    console.error('Error saving vendor:', error)
-    show('Failed to save vendor. Please try again.', 'error')
+    show(error.message || 'An error occurred', 'error')
   } finally {
     setLoading(false)
   }
 }
+
+const confirmDelete = async () => {
+  if (!vendorToDelete.value) return
+  
+  setLoading(true)
+
+  try {
+    const result = await vendorStore.deleteVendor(vendorToDelete.value.id)
+    
+    if (result.success) {
+      show('Vendor deleted successfully', 'success')
+      cancelDelete()
+    } else {
+      show(result.error || 'Failed to delete vendor', 'error')
+    }
+  } catch (error) {
+    show(error.message || 'An error occurred', 'error')
+  } finally {
+    setLoading(false)
+  }
+}
+
+onMounted(async () => {
+  setLoading(true)
+  try {
+    await vendorStore.loadVendors()
+    vendors.value = vendorStore.vendors
+  } catch (error) {
+    show('Failed to load vendors', 'error')
+  } finally {
+    setLoading(false)
+  }
+})
 
 const askDelete = (vendor) => {
   vendorToDelete.value = vendor
   showConfirm.value = true
 }
 
-const confirmDelete = () => {
-  setLoading(true)
-
-  setTimeout(() => {
-    vendors.value = vendors.value.filter(
-      v => v.id !== vendorToDelete.value.id
-    )
-
-    show('Vendor deleted', 'error')
-
-    vendorToDelete.value = null
-    showConfirm.value = false
-    setLoading(false)
-  }, 700)
-}
 
 const cancelDelete = () => {
   vendorToDelete.value = null
   showConfirm.value = false
 }
 </script>
-
 
 <style scoped>
 .page-header {

@@ -39,4 +39,37 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
         $userData = array_merge($data, ['organization_id' => $organizationId]);
         return User::create($userData);
     }
+
+    public function forTenant(int $organizationId): Collection
+    {
+        return User::where('organization_id', $organizationId)->get();
+    }
+
+    public function findByIdForTenant(int $id, int $organizationId): ?User
+    {
+        return User::where('organization_id', $organizationId)->find($id);
+    }
+
+    public function updateForTenant(int $id, int $organizationId, array $data): ?User
+    {
+        $user = User::where('organization_id', $organizationId)->find($id);
+        
+        if (!$user) {
+            return null;
+        }
+
+        $user->update($data);
+        return $user->fresh();
+    }
+
+    public function deleteForTenant(int $id, int $organizationId): bool
+    {
+        $user = User::where('organization_id', $organizationId)->find($id);
+        
+        if (!$user) {
+            return false;
+        }
+
+        return $user->delete();
+    }
 }

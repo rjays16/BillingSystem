@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\VendorController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,3 +31,7 @@ Route::prefix('invoices')->middleware('auth:sanctum')->group(function () {
 });
 
 Route::apiResource('organizations', OrganizationController::class)->middleware('auth:sanctum');
+
+Route::apiResource('vendors', VendorController::class)->middleware('auth:sanctum');
+
+Route::apiResource('users', UserController::class)->middleware('auth:sanctum');

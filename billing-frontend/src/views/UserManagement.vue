@@ -92,159 +92,35 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import AppLayout from '../layouts/AppLayout.vue'
-import { useAuthStore } from '../stores/auth'
-import { useOrganizationStore } from '../stores/organization'
-import { useToast } from '../composables/useToast'
-import UserForm from '../components/UserForm.vue'
-import ConfirmModal from '../components/ConfirmModal.vue'
+import { ref, computed, onMounted } from 'vue'
+ import AppLayout from '../layouts/AppLayout.vue'
+ import { useAuthStore } from '../stores/auth'
+ import { useOrganizationStore } from '../stores/organization'
+ import { useUserStore } from '../stores/user'
+ import { useToast } from '../composables/useToast'
+ import UserForm from '../components/UserForm.vue'
+ import ConfirmModal from '../components/ConfirmModal.vue'
 
-const authStore = useAuthStore()
-const organizationStore = useOrganizationStore()
-const { show } = useToast()
-
-const allUsers = [
-  { 
-    id: 1, 
-    name: 'Allan Admin', 
-    email: 'allan@example.com',
-    role: 'admin', 
-    status: 'active', 
-    joinedDate: '2024-01-15',
-    organization_id: 1,
-    organization: 'Department of Health'
-  },
-  { 
-    id: 2, 
-    name: 'Rjay Accountant', 
-    email: 'accountant@example.com',
-    role: 'accountant', 
-    status: 'active', 
-    joinedDate: '2024-01-20',
-    organization_id: 1,
-    organization: 'Department of Health'
-  },
-  { 
-    id: 3, 
-    name: 'Allan Condiman', 
-    email: 'allan@doh.gov.ph',
-    role: 'accountant', 
-    status: 'active', 
-    joinedDate: '2024-02-01',
-    organization_id: 1,
-    organization: 'Department of Health'
-  },
-  
-  { 
-    id: 4, 
-    name: 'Coco martin', 
-    email: 'coco@example.com',
-    role: 'admin', 
-    status: 'active', 
-    joinedDate: '2024-01-20',
-    organization_id: 2,
-    organization: 'Bureau of Internal Revenue'
-  },
-  { 
-    id: 5, 
-    name: 'Sheena Catacutan', 
-    email: 'sheena.catacutan@bir.gov.ph',
-    role: 'accountant', 
-    status: 'inactive', 
-    joinedDate: '2024-03-10',
-    organization_id: 2,
-    organization: 'Bureau of Internal Revenue'
-  },
-  
-  { 
-    id: 6, 
-    name: 'Aljun Condiman', 
-    email: 'aljun.condiman@sss.gov.ph',
-    role: 'accountant', 
-    status: 'active', 
-    joinedDate: '2024-01-25',
-    organization_id: 3,
-    organization: 'Social Security System'
-  }
-]
-
-const showUserForm = ref(false)
-const showConfirm = ref(false)
-const selectedUser = ref(null)
-const userToDelete = ref(null)
-
-const users = ref([
-  { 
-    id: 1, 
-    name: 'Allan Admin', 
-    email: 'allan@example.com',
-    role: 'admin', 
-    status: 'active', 
-    joinedDate: '2024-01-15',
-    organization_id: 1,
-    organization: 'Department of Health'
-  },
-  { 
-    id: 2, 
-    name: 'Rjay Accountant', 
-    email: 'accountant@example.com',
-    role: 'accountant', 
-    status: 'active', 
-    joinedDate: '2024-01-20',
-    organization_id: 1,
-    organization: 'Department of Health'
-  },
-  { 
-    id: 3, 
-    name: 'Allan Condiman', 
-    email: 'allan@doh.gov.ph',
-    role: 'accountant', 
-    status: 'active', 
-    joinedDate: '2024-02-01',
-    organization_id: 1,
-    organization: 'Department of Health'
-  },
-  
-  { 
-    id: 4, 
-    name: 'Coco martin', 
-    email: 'coco@example.com',
-    role: 'admin', 
-    status: 'active', 
-    joinedDate: '2024-01-20',
-    organization_id: 2,
-    organization: 'Bureau of Internal Revenue'
-  },
-  { 
-    id: 5, 
-    name: 'Sheena Catacutan', 
-    email: 'sheena.catacutan@bir.gov.ph',
-    role: 'accountant', 
-    status: 'inactive', 
-    joinedDate: '2024-03-10',
-    organization_id: 2,
-    organization: 'Bureau of Internal Revenue'
-  },
-  
-  { 
-    id: 6, 
-    name: 'Aljun Condiman', 
-    email: 'aljun.condiman@sss.gov.ph',
-    role: 'accountant', 
-    status: 'active', 
-    joinedDate: '2024-01-25',
-    organization_id: 3,
-    organization: 'Social Security System'
-  }
-])
+ const authStore = useAuthStore()
+ const organizationStore = useOrganizationStore()
+ const userStore = useUserStore()
+ const { show } = useToast()
 
 const organizationUsers = computed(() => {
   if (!organizationStore.currentOrganization) return []
   
-  return users.value.filter(user => 
+  return userStore.users.filter(user => 
     user.organization_id === organizationStore.currentOrganization.id
   )
+})
+
+onMounted(async () => {
+  try {
+    await userStore.loadUsers()
+    allUsers.value = userStore.users
+  } catch (error) {
+    show('Failed to load users', 'error')
+  }
 })
 
 const getUserAvatar = (name) => {
@@ -266,30 +142,30 @@ const closeUserForm = () => {
   selectedUser.value = null
 }
 
-const saveUser = (userData) => {
-  if (selectedUser.value) {
-   
-    const index = users.value.findIndex(u => u.id === selectedUser.value.id)
-    if (index !== -1) {
-      users.value[index] = {
-        ...users.value[index],
-        ...userData,
-        organization: getOrganizationName(userData.organization_id)
+const saveUser = async (userData) => {
+  try {
+    if (selectedUser.value) {
+      const result = await userStore.updateUser(selectedUser.value.id, userData)
+      
+      if (result.success) {
+        show('User updated successfully', 'success')
+        closeUserForm()
+      } else {
+        show(result.error || 'Failed to update user', 'error')
       }
-      show('User updated successfully', 'success')
+    } else {
+      const result = await userStore.createUser(userData)
+      
+      if (result.success) {
+        show('User created successfully', 'success')
+        closeUserForm()
+      } else {
+        show(result.error || 'Failed to create user', 'error')
+      }
     }
-  } else {
-    const newUser = {
-      id: Date.now(),
-      ...userData,
-      status: 'active',
-      joinedDate: new Date().toISOString().split('T')[0],
-      organization: getOrganizationName(userData.organization_id)
-    }
-    users.value.push(newUser)
-    show('User added successfully', 'success')
+  } catch (error) {
+    show(error.message || 'An error occurred', 'error')
   }
-  closeUserForm()
 }
 
 const askDeleteUser = (user) => {
@@ -297,12 +173,20 @@ const askDeleteUser = (user) => {
   showConfirm.value = true
 }
 
-const confirmDeleteUser = () => {
-  if (userToDelete.value) {
-    users.value = users.value.filter(u => u.id !== userToDelete.value.id)
-    show('User deleted successfully', 'error')
-    userToDelete.value = null
-    showConfirm.value = false
+const confirmDeleteUser = async () => {
+  if (!userToDelete.value) return
+  
+  try {
+    const result = await userStore.deleteUser(userToDelete.value.id)
+    
+    if (result.success) {
+      show('User deleted successfully', 'success')
+      cancelDeleteUser()
+    } else {
+      show(result.error || 'Failed to delete user', 'error')
+    }
+  } catch (error) {
+    show(error.message || 'An error occurred', 'error')
   }
 }
 
