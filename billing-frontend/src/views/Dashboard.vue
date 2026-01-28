@@ -146,15 +146,7 @@ const fetchDashboardData = async () => {
       currentUser: null,
     }
   }
-      organization_id: organizationId,
-      amount: Math.floor(Math.random() * 50000) + 5000,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      date: new Date(2026, 0, Math.floor(Math.random() * 27) + 1).toISOString().split('T')[0]
-    })
-  }
-  
-  return invoices.sort((a, b) => new Date(b.date) - new Date(a.date))
-})()
+}
 
 const organizationInvoices = computed(() => {
   if (!organizationStore.currentOrganization) {

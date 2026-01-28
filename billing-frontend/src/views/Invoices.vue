@@ -205,6 +205,7 @@ import { useToast } from '../composables/useToast'
 import { apiEndpoints } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
+import { onMounted } from 'vue'
 
 const router = useRouter()
 const { show } = useToast()
@@ -212,35 +213,7 @@ const setLoading = inject('setLoading')
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
 
-const invoices = ref(generateMockInvoices())
-
-function generateMockInvoices() {
-  const statuses = ['Paid', 'Pending', 'Overdue']
-  const mockInvoices = []
-  
-  for (let i = 1; i <= 47; i++) {
-    let organizationId
-    if (i <= 20) {
-      organizationId = 1 
-    } else if (i <= 33) {
-      organizationId = 2   
-    } else {
-      organizationId = 3 
-    }
-    
-    mockInvoices.push({
-      id: i,
-      number: `INV-${String(i).padStart(3, '0')}`,
-      vendorId: ((i - 1) % 3) + 1,
-      organization_id: organizationId,
-      amount: Math.floor(Math.random() * 50000) + 5000,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      date: new Date(2026, 0, Math.floor(Math.random() * 27) + 1).toISOString().split('T')[0]
-    })
-  }
-  
-  return mockInvoices.sort((a, b) => new Date(b.date) - new Date(a.date))
-}
+const invoices = ref([])
 
 const showForm = ref(false)
 const showConfirm = ref(false)
@@ -272,7 +245,7 @@ const searchFilteredInvoices = computed(() => {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(invoice => {
       const invoiceMatch = invoice.number.toLowerCase().includes(query)
-      const vendor = vendors.find(v => v.id === invoice.vendorId)
+      const vendors = ref([])
       const vendorMatch = vendor && vendor.name.toLowerCase().includes(query)
       return invoiceMatch || vendorMatch
     })
@@ -343,10 +316,21 @@ const displayedPages = computed(() => {
   return totalPages.value === 1 ? [1] : rangeWithDots
 })
 
-const getVendorName = (vendorId) => {
-  const vendor = vendors.find(v => v.id === vendorId)
-  return vendor ? vendor.name : 'Unknown Vendor'
+const getVendorName = () => '—'
+
+const fetchInvoices = async () => {
+  setLoading(true)
+
+  try {
+    const response = await apiEndpoints.getInvoices()
+    invoices.value = response.data.data ?? response.data
+  } catch (e) {
+    console.error(e)
+  } finally {
+    setLoading(false)
+  }
 }
+
 
 const goToInvoice = (id) => {
   router.push(`/invoices/${id}`)
@@ -371,73 +355,63 @@ const saveInvoice = async (data) => {
   setLoading(true)
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
     if (selectedInvoice.value) {
+      const response = await apiEndpoints.updateInvoice(
+        selectedInvoice.value.id,
+        data
+      )
+
       const index = invoices.value.findIndex(
         inv => inv.id === selectedInvoice.value.id
       )
 
       if (index !== -1) {
-        invoices.value[index] = {
-          ...invoices.value[index],
-          ...data,
-          updatedAt: new Date().toISOString()
-        }
+        invoices.value[index] = response.data.data
       }
 
       show('Invoice updated successfully', 'success')
     } else {
-      const existingInvoice = invoices.value.find(inv => 
-        inv.number.toLowerCase() === data.number.toLowerCase()
-      )
-      
-      if (existingInvoice) {
-        show('Invoice number already exists', 'error')
-        setLoading(false)
-        return
-      }
-
-      const newInvoice = {
-        id: Date.now(),
-        ...data,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      
-      invoices.value.push(newInvoice)
-      show(`Invoice ${data.number} created successfully`, 'success')
+      const response = await apiEndpoints.createInvoice(data)
+      invoices.value.unshift(response.data.data)
+      show('Invoice created successfully', 'success')
     }
 
     closeForm()
   } catch (error) {
-    console.error('Error saving invoice:', error)
-    show('Failed to save invoice. Please try again.', 'error')
+    console.error(error)
+    show(error.response?.data?.message || 'Failed to save invoice', 'error')
   } finally {
     setLoading(false)
   }
 }
+
 
 const askDelete = (invoice) => {
   invoiceToDelete.value = invoice
   showConfirm.value = true
 }
 
-const confirmDelete = () => {
+const confirmDelete = async () => {
   setLoading(true)
 
-  setTimeout(() => {
+  try {
+    await apiEndpoints.deleteInvoice(invoiceToDelete.value.id)
+
     invoices.value = invoices.value.filter(
       inv => inv.id !== invoiceToDelete.value.id
     )
 
-    show('Invoice deleted', 'error')
-
+    show('Invoice deleted successfully', 'success')
+  } catch (error) {
+    console.error(error)
+    show('Failed to delete invoice', 'error')
+  } finally {
     invoiceToDelete.value = null
     showConfirm.value = false
     setLoading(false)
-  }, 700)
+  }
 }
+
 
 const cancelDelete = () => {
   invoiceToDelete.value = null
@@ -472,6 +446,10 @@ const clearFilters = () => {
   statusFilter.value = ''
   currentPage.value = 1
 }
+
+onMounted(() => {
+  fetchInvoices()
+})
 
 watch(() => organizationStore.currentOrganization, () => {
   currentPage.value = 1
