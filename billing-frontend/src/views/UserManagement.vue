@@ -105,6 +105,7 @@ import { ref, computed, onMounted } from 'vue'
  const organizationStore = useOrganizationStore()
  const userStore = useUserStore()
  const { show } = useToast()
+const allUsers = ref([])
 
 const organizationUsers = computed(() => {
   if (!organizationStore.currentOrganization) return []

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { apiEndpoints } from '../services/api'
+import { useAuthStore } from './auth'
 
 export const useOrganizationStore = defineStore('organization', {
   state: () => ({
