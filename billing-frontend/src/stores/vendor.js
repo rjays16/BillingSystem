@@ -35,10 +35,14 @@ export const useVendorStore = defineStore('vendor', {
       
       try {
         const response = await apiEndpoints.getVendors()
-        this.vendors = response.data.data || []
+        
+        this.vendors = response.data.data || response.data || []
+        
+        return { success: true, data: this.vendors }
       } catch (error) {
         console.error('Error loading vendors:', error)
         this.error = error.message
+        return { success: false, error: this.error }
       } finally {
         this.loading = false
       }
@@ -50,7 +54,7 @@ export const useVendorStore = defineStore('vendor', {
       
       try {
         const response = await apiEndpoints.createVendor(vendorData)
-        const newVendor = response.data.data
+        const newVendor = response.data.data || response.data
         this.vendors.push(newVendor)
         return { success: true, data: newVendor }
       } catch (error) {
@@ -68,7 +72,7 @@ export const useVendorStore = defineStore('vendor', {
       
       try {
         const response = await apiEndpoints.updateVendor(id, vendorData)
-        const updatedVendor = response.data.data
+        const updatedVendor = response.data.data || response.data
         
         const index = this.vendors.findIndex(vendor => vendor.id === id)
         if (index !== -1) {

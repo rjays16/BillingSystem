@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import api, { apiEndpoints } from '../services/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -36,49 +37,30 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials) {
       console.log('Auth store login called with:', credentials)
       try {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(credentials)
-        })
-
-        const data = await response.json()
-        console.log('API response:', { status: response.status, data })
-
-        if (response.ok) {
-          this.user = data.user
-          this.token = data.token
-          this.isAuthenticated = true
-          this.loginTime = Date.now()
-          localStorage.setItem('auth-user', JSON.stringify(this.user))
-          localStorage.setItem('auth-token', this.token)
-          localStorage.setItem('is-authenticated', 'true')
-          localStorage.setItem('session-start', this.loginTime.toString())
-          
-          return { success: true, user: data.user }
-        } else {
-          return { success: false, error: data.message || 'Login failed' }
-        }
+        const response = await apiEndpoints.login(credentials)
+        
+        this.user = response.data.user
+        this.token = response.data.token
+        this.isAuthenticated = true
+        this.loginTime = Date.now()
+        localStorage.setItem('auth-user', JSON.stringify(this.user))
+        localStorage.setItem('auth-token', this.token)
+        localStorage.setItem('is-authenticated', 'true')
+        localStorage.setItem('session-start', this.loginTime.toString())
+        
+        console.log('Token stored in localStorage:', localStorage.getItem('auth-token'))
+        
+        return { success: true, user: response.data.user }
       } catch (error) {
         console.error('Login error:', error)
-        return { success: false, error: 'Network error' }
+        return { success: false, error: error.response?.data?.message || 'Network error' }
       }
     },
 
     async logout() {
       try {
         if (this.token) {
-          await fetch('/api/logout', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${this.token}`
-            }
-          })
+          await apiEndpoints.logout()
         }
 
         this.user = null

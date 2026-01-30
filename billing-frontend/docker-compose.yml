@@ -12,8 +12,9 @@ services:
       - /app/node_modules
     command: npm run dev -- --host 0.0.0.0 --port 3000
     networks:
-      - billing-frontend-network
+      - billing-network
 
 networks:
-  billing-frontend-network:
-    driver: bridge
+  billing-network:
+    external: true
+    name: billing-backend_billing-network

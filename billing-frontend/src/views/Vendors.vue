@@ -13,7 +13,12 @@
       </div>
 
       <div class="table-wrapper">
-        <table>
+        <div v-if="loading || vendorStore.loading" class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Loading vendors...</p>
+        </div>
+        
+        <table v-else>
           <thead>
             <tr>
               <th>Vendor</th>
@@ -24,7 +29,7 @@
           </thead>
 
           <tbody>
-            <tr v-for="vendor in vendors" :key="vendor.id" class="vendor-row" @click="goToVendor(vendor)">
+            <tr v-for="vendor in vendorStore.vendors" :key="vendor.id" class="vendor-row" @click="goToVendor(vendor)">
               <td>{{ vendor.name }}</td>
               <td>{{ vendor.email }}</td>
               <td>{{ vendor.phone }}</td>
@@ -36,7 +41,7 @@
               </td>
             </tr>
 
-            <tr v-if="vendors.length === 0">
+            <tr v-if="vendorStore.vendors.length === 0">
               <td colspan="4" class="empty">No vendors found</td>
             </tr>
           </tbody>
@@ -63,19 +68,18 @@
 </template>
 
 <script setup>
- import { ref, inject, onMounted } from 'vue'
- import { useRouter } from 'vue-router'
- import AppLayout from '../layouts/AppLayout.vue'
- import VendorForm from '../components/VendorForm.vue'
- import ConfirmModal from '../components/ConfirmModal.vue'
- import { useToast } from '../composables/useToast'
- import { useVendorStore } from '../stores/vendor'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import AppLayout from '../layouts/AppLayout.vue'
+import VendorForm from '../components/VendorForm.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
+import { useToast } from '../composables/useToast'
+import { useVendorStore } from '../stores/vendor'
 
- const { show } = useToast()
- const setLoading = inject('setLoading')
- const router = useRouter()
- const vendorStore = useVendorStore()
- const vendors = ref([])
+const { show } = useToast()
+const router = useRouter()
+const vendorStore = useVendorStore()
+const loading = ref(false)
 
 const showForm = ref(false)
 const showConfirm = ref(false)
@@ -105,7 +109,7 @@ const closeForm = () => {
 }
 
 const saveVendor = async (data) => {
-  setLoading(true)
+  loading.value = true
 
   try {
     if (selectedVendor.value) {
@@ -130,14 +134,14 @@ const saveVendor = async (data) => {
   } catch (error) {
     show(error.message || 'An error occurred', 'error')
   } finally {
-    setLoading(false)
+    loading.value = false
   }
 }
 
 const confirmDelete = async () => {
   if (!vendorToDelete.value) return
   
-  setLoading(true)
+  loading.value = true
 
   try {
     const result = await vendorStore.deleteVendor(vendorToDelete.value.id)
@@ -151,19 +155,24 @@ const confirmDelete = async () => {
   } catch (error) {
     show(error.message || 'An error occurred', 'error')
   } finally {
-    setLoading(false)
+    loading.value = false
   }
 }
 
 onMounted(async () => {
-  setLoading(true)
+  loading.value = true
   try {
-    await vendorStore.loadVendors()
-    vendors.value = vendorStore.vendors
+    console.log('Loading vendors...')
+    const result = await vendorStore.loadVendors()
+    console.log('Load result:', result)
+    console.log('Vendors from store:', vendorStore.vendors)
+    console.log('Vendor store loading:', vendorStore.loading)
+    console.log('Vendor store error:', vendorStore.error)
   } catch (error) {
+    console.error('Failed to load vendors:', error)
     show('Failed to load vendors', 'error')
   } finally {
-    setLoading(false)
+    loading.value = false
   }
 })
 
@@ -273,6 +282,30 @@ button.danger {
   text-align: center;
   padding: 2rem;
   color: #9ca3af;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {

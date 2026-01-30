@@ -78,7 +78,12 @@
       </div>
 
       <div class="table-wrapper">
-        <table class="invoice-table">
+        <div v-if="loading" class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Loading invoices...</p>
+        </div>
+        
+        <table v-else class="invoice-table">
           <thead>
             <tr>
               <th>Invoice #</th>
@@ -210,7 +215,7 @@ import { onMounted } from 'vue'
 
 const router = useRouter()
 const { show } = useToast()
-const setLoading = inject('setLoading')
+const loading = ref(false)
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
 const vendorStore = useVendorStore()
@@ -347,7 +352,7 @@ const getStatusLabel = (status) => {
 }
 
 const fetchInvoices = async () => {
-  setLoading(true)
+  loading.value = true
 
   try {
     const response = await apiEndpoints.getInvoices()
@@ -355,7 +360,7 @@ const fetchInvoices = async () => {
   } catch (e) {
     console.error(e)
   } finally {
-    setLoading(false)
+    loading.value = false
   }
 }
 
@@ -388,7 +393,7 @@ const closeForm = () => {
 }
 
 const saveInvoice = async (data) => {
-  setLoading(true)
+  loading.value = true
 
   try {
     if (selectedInvoice.value) {
@@ -417,7 +422,7 @@ const saveInvoice = async (data) => {
     console.error(error)
     show(error.response?.data?.message || 'Failed to save invoice', 'error')
   } finally {
-    setLoading(false)
+    loading.value = false
   }
 }
 
@@ -428,7 +433,7 @@ const askDelete = (invoice) => {
 }
 
 const confirmDelete = async () => {
-  setLoading(true)
+  loading.value = true
 
   try {
     await apiEndpoints.deleteInvoice(invoiceToDelete.value.id)
@@ -444,7 +449,7 @@ const confirmDelete = async () => {
   } finally {
     invoiceToDelete.value = null
     showConfirm.value = false
-    setLoading(false)
+    loading.value = false
   }
 }
 
