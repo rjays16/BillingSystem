@@ -1,18 +1,31 @@
 <template>
   <router-view />
-  <ToastContainer />
-  <Loader :loading="loading" />
 </template>
 
 <script setup>
-import { ref, provide } from 'vue'
+import { onMounted, onErrorCaptured } from 'vue'
+import { useAuthStore } from './stores/auth'
 import ToastContainer from './components/ToastContainer.vue'
 import Loader from './components/Loader.vue'
 
-const loading = ref(false)
+const authStore = useAuthStore()
 
-/* Make loader controllable from anywhere */
-provide('setLoading', (value) => {
-  loading.value = value
+onMounted(() => {
+  authStore.initializeAuth()
+})
+
+onErrorCaptured((error, instance, info) => {
+  console.error('Global error:', error)
+  
+  if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+    window.location.href = '/login'
+  }
 })
 </script>
+
+<style scoped>
+#app {
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+</style>

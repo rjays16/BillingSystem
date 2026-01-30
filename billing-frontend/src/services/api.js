@@ -32,25 +32,28 @@ api.interceptors.response.use(
 export default api
 
 export const apiEndpoints = {
-  getOrganizations: () => api.get('/api/organizations'),
-  getCurrentUser: () => api.get('/api/user'),
-  getOrganizationUsers: (orgId) => api.get(`/api/organizations/${orgId}/users`),
+  getOrganizations: () => api.get('/organizations'),
+  getCurrentUser: () => api.get('/user'),
+  getOrganizationUsers: (orgId) => api.get(`/organizations/${orgId}/users`),
   
-  getVendors: () => api.get('/api/vendors'),
-  getVendor: (id) => api.get(`/api/vendors/${id}`),
-  createVendor: (data) => api.post('/api/vendors', data),
-  updateVendor: (id, data) => api.put(`/api/vendors/${id}`, data),
-  deleteVendor: (id) => api.delete(`/api/vendors/${id}`),
+  getVendors: () => api.get('/vendors'),
+  getVendor: (id) => api.get(`/vendors/${id}`),
+  createVendor: (data) => api.post('/vendors', data),
+  updateVendor: (id, data) => api.put(`/vendors/${id}`, data),
+  deleteVendor: (id) => api.delete(`/vendors/${id}`),
   
-  getUsers: () => api.get('/api/users'),
-  getUser: (id) => api.get(`/api/users/${id}`),
-  createUser: (data) => api.post('/api/users', data),
-  updateUser: (id, data) => api.put(`/api/users/${id}`, data),
-  deleteUser: (id) => api.delete(`/api/users/${id}`),
+  getUsers: () => api.get('/users'),
+  getUser: (id) => api.get(`/users/${id}`),
+  createUser: (data) => api.post('/users', data),
+  updateUser: (id, data) => api.put(`/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/users/${id}`),
   
-  getInvoices: () => api.get('/api/invoices'),
-  getInvoice: (id) => api.get(`/api/invoices/${id}`),
-  createInvoice: (data) => api.post('/api/invoices', data),
-  updateInvoice: (id, data) => api.put(`/api/invoices/${id}`, data),
-  deleteInvoice: (id) => api.delete(`/api/invoices/${id}`),
+  getInvoices: () => api.get('/invoices'),
+  getInvoice: (id) => api.get(`/invoices/${id}`),
+  createInvoice: (data) => api.post('/invoices', data),
+  updateInvoice: (id, data) => api.put(`/invoices/${id}`, data),
+  deleteInvoice: (id) => api.delete(`/invoices/${id}`),
+
+  login: (credentials) => api.post('/login', credentials),
+  logout: () => api.post('/logout'),
 }
