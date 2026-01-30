@@ -56,4 +56,5 @@ export const apiEndpoints = {
 
   login: (credentials) => api.post('/api/login', credentials),
   logout: () => api.post('/api/logout'),
+  updateProfile: (data) => api.put('/api/user/profile', data),
 }

@@ -37,11 +37,12 @@ class UserController extends Controller
     public function store(UserStoreRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $validated['organization_id'] = $request->user()->organization_id;
-        $validated['password'] = bcrypt($validated['password']);
-
-        $user = $this->userRepository->create($validated);
-
+        
+        $user = $this->userRepository->createForTenant(
+            $validated,
+            $request->user()->organization_id
+        );
+        
         return response()->json([
             'success' => true,
             'message' => 'User created successfully',

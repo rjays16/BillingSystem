@@ -23,6 +23,7 @@ use App\Http\Controllers\UserController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/user', [AuthController::class, 'user'])->middleware('auth:sanctum');
+Route::put('/user/profile', [AuthController::class, 'updateProfile'])->middleware('auth:sanctum');
 
 Route::apiResource('invoices', InvoiceController::class)->middleware('auth:sanctum');
 
@@ -33,5 +34,5 @@ Route::prefix('invoices')->middleware('auth:sanctum')->group(function () {
 Route::apiResource('organizations', OrganizationController::class)->middleware('auth:sanctum');
 
 Route::apiResource('vendors', VendorController::class)->middleware('auth:sanctum');
-
 Route::apiResource('users', UserController::class)->middleware('auth:sanctum');
+

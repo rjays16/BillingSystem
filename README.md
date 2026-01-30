@@ -467,7 +467,7 @@ class Invoice extends Model
 - `PUT /api/users/{id}` - Update user
 - `DELETE /api/users/{id}` - Delete user (admin only)
 
-## 🐳 Docker Services
+## Docker Services
 
 ### Backend Services
 

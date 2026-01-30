@@ -60,12 +60,73 @@ class AuthController extends Controller
     public function user(Request $request): JsonResponse
     {
         $user = $request->user()->load('organization');
-
+        
         return response()->json([
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'organization' => [
+                    'id' => $user->organization->id,
+                    'name' => $user->organization->name,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Update current user's profile.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        // Update user fields
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+        ]);
+
+        // Handle password change if provided
+        if (!empty($validated['current_password']) && !empty($validated['new_password'])) {
+            if (!password_verify($validated['current_password'], $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect',
+                ], 422);
+            }
+
+            if (strlen($validated['new_password']) < 8) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'New password must be at least 8 characters',
+                ], 422);
+            }
+
+            $user->update([
+                'password' => bcrypt($validated['new_password']),
+            ]);
+        }
+
+        $user->load('organization');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $user->role,
                 'organization' => [
                     'id' => $user->organization->id,

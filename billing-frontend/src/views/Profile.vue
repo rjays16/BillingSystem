@@ -1,10 +1,12 @@
 <template>
   <AppLayout>
     <div class="profile-container">
-      <div class="page-header">
-        <h1>Profile</h1>
-        <p class="subtitle">Manage your personal profile information</p>
-      </div>
+        <div class="page-header">
+          <div>
+            <h1>Profile</h1>
+            <p class="subtitle">Manage your personal profile information</p>
+          </div>
+        </div>
 
       <div class="profile-card">
         <div class="profile-header">
@@ -182,11 +184,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onActivated, computed, onUnmounted } from 'vue'
 import { useToast } from '../composables/useToast'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
+import api, { apiEndpoints } from '../services/api'
 
 const { show } = useToast()
 const authStore = useAuthStore()
@@ -209,15 +212,53 @@ const passwordData = ref({
 
 onMounted(() => {
   loadUserProfile()
+  loadCurrentUserFromAPI()
+})
+
+onActivated(() => {
+  console.log('Profile component activated, refreshing data...')
+  loadCurrentUserFromAPI()
+})
+
+let refreshInterval = null
+onMounted(() => {
+  refreshInterval = setInterval(() => {
+    loadCurrentUserFromAPI()
+  }, 30000) 
+  
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      loadCurrentUserFromAPI()
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
 })
 
 const loadUserProfile = () => {
-  if (authStore.user) {
-    formData.value = {
-      name: authStore.user.name || '',
-      email: authStore.user.email || '',
-      phone: authStore.user.phone || ''
+
+}
+
+const loadCurrentUserFromAPI = async () => {
+  try {
+    const response = await apiEndpoints.getCurrentUser()
+    
+    if (response.data && response.data.user) {
+      authStore.user = response.data.user
+      
+      formData.value = {
+        name: response.data.user.name || '',
+        email: response.data.user.email || '',
+        phone: response.data.user.phone || ''
+      }
+      
     }
+  } catch (error) {
+    console.error('Failed to load current user from API:', error)
   }
 }
 
@@ -332,6 +373,10 @@ const resetForm = () => {
 }
 
 const saveProfile = async () => {
+  console.log('Save profile called')
+  console.log('Form data:', formData.value)
+  console.log('Password data:', passwordData.value)
+  
   if (!validateForm()) {
     show('Please fix errors before saving', 'error')
     return
@@ -340,28 +385,43 @@ const saveProfile = async () => {
   isSaving.value = true
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const updateData = {
+      name: formData.value.name,
+      email: formData.value.email,
+      phone: formData.value.phone,
+      current_password: passwordData.value.currentPassword,
+      new_password: passwordData.value.newPassword
+    }
+
+    console.log('Sending update data:', updateData)
+    const response = await api.updateProfile(updateData)
+    console.log('API response:', response)
     
-    if (formData.value.name || formData.value.email || formData.value.phone) {
-      authStore.user = {
-        ...authStore.user,
-        name: formData.value.name,
-        email: formData.value.email,
-        phone: formData.value.phone
+    if (response.data.success) {
+      authStore.user = response.data.user
+      
+      show('Profile updated successfully!', 'success')
+      
+      passwordData.value = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
       }
-      localStorage.setItem('auth-user', JSON.stringify(authStore.user))
-    }
-    
-    if (passwordData.value.newPassword) {
-      show('Password changed successfully', 'success')
-    }
-    
-    show('Profile updated successfully!', 'success')
-    
-    passwordData.value = {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
+      
+      setTimeout(async () => {
+        await loadCurrentUserFromAPI()
+        // Also emit event to update other components
+        const event = new CustomEvent('dataUpdated', { detail: 'User profile updated' })
+        window.dispatchEvent(event)
+      }, 500)
+      
+      passwordData.value = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }
+    } else {
+      show(response.data.message || 'Failed to update profile', 'error')
     }
     
   } catch (error) {

@@ -284,6 +284,11 @@ onMounted(() => {
     organizationStore.setCurrentOrganizationByAuth(authStore)
   }
   
+  window.addEventListener('userUpdated', (event) => {
+    authStore.user = event.detail
+    localStorage.setItem('auth-user', JSON.stringify(event.detail))
+  })
+  
   startSessionTimeoutCheck()
 })
 
