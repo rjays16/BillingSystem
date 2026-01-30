@@ -52,9 +52,9 @@
                 @change="resetToFirstPage"
               >
                 <option value="">All Status</option>
-                <option value="Paid">Paid</option>
-                <option value="Pending">Pending</option>
-                <option value="Overdue">Overdue</option>
+                <option value="paid">Paid</option>
+                <option value="sent">Sent</option>
+                <option value="overdue">Overdue</option>
               </select>
             </div>
             
@@ -93,14 +93,14 @@
           <tbody>
             <tr v-for="invoice in displayInvoices" :key="invoice.id">
               <td @click="goToInvoice(invoice.id)" class="clickable">{{ invoice.number }}</td>
-              <td @click="goToInvoice(invoice.id)" class="clickable">{{ getVendorName(invoice.vendorId) }}</td>
+              <td @click="goToInvoice(invoice.id)" class="clickable">{{ getVendorName(invoice) }}</td>
               <td @click="goToInvoice(invoice.id)" class="clickable">₱{{ invoice.amount.toLocaleString() }}</td>
               <td @click="goToInvoice(invoice.id)" class="clickable">
                 <span
                   class="status"
-                  :class="invoice.status.toLowerCase()"
+                  :class="getStatusClass(invoice.status)"
                 >
-                  {{ invoice.status }}
+                  {{ getStatusLabel(invoice.status) }}
                 </span>
               </td>
               <td @click="goToInvoice(invoice.id)" class="clickable">{{ invoice.date }}</td>
@@ -205,6 +205,7 @@ import { useToast } from '../composables/useToast'
 import { apiEndpoints } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
+import { useVendorStore } from '../stores/vendor'
 import { onMounted } from 'vue'
 
 const router = useRouter()
@@ -212,6 +213,7 @@ const { show } = useToast()
 const setLoading = inject('setLoading')
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
+const vendorStore = useVendorStore()
 
 const invoices = ref([])
 
@@ -245,8 +247,13 @@ const searchFilteredInvoices = computed(() => {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(invoice => {
       const invoiceMatch = invoice.number.toLowerCase().includes(query)
-      const vendors = ref([])
-      const vendorMatch = vendor && vendor.name.toLowerCase().includes(query)
+      let vendorMatch = false
+      if (invoice.vendor && invoice.vendor.name) {
+        vendorMatch = invoice.vendor.name.toLowerCase().includes(query)
+      } else {
+        const vendor = vendorStore.vendorById(invoice.vendor_id)
+        vendorMatch = vendor && vendor.name.toLowerCase().includes(query)
+      }
       return invoiceMatch || vendorMatch
     })
   }
@@ -316,7 +323,28 @@ const displayedPages = computed(() => {
   return totalPages.value === 1 ? [1] : rangeWithDots
 })
 
-const getVendorName = () => '—'
+const getVendorName = (invoice) => {
+  if (invoice.vendor && invoice.vendor.name) {
+    return invoice.vendor.name
+  }
+  const vendor = vendorStore.vendorById(invoice.vendor_id)
+  return vendor ? vendor.name : '—'
+}
+
+const getStatusClass = (status) => {
+  return status.toLowerCase()
+}
+
+const getStatusLabel = (status) => {
+  const statusMap = {
+    'draft': 'Draft',
+    'sent': 'Sent', 
+    'paid': 'Paid',
+    'overdue': 'Overdue',
+    'cancelled': 'Cancelled'
+  }
+  return statusMap[status] || status
+}
 
 const fetchInvoices = async () => {
   setLoading(true)
@@ -328,6 +356,14 @@ const fetchInvoices = async () => {
     console.error(e)
   } finally {
     setLoading(false)
+  }
+}
+
+const fetchVendors = async () => {
+  try {
+    await vendorStore.loadVendors()
+  } catch (e) {
+    console.error('Error loading vendors:', e)
   }
 }
 
@@ -449,6 +485,7 @@ const clearFilters = () => {
 
 onMounted(() => {
   fetchInvoices()
+  fetchVendors()
 })
 
 watch(() => organizationStore.currentOrganization, () => {
@@ -506,19 +543,93 @@ watch(() => organizationStore.currentOrganization, () => {
 }
 
 .status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
+  padding: 0.35rem 0.875rem;
+  border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.status:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 .status.paid {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: 1px solid #047857;
+  font-weight: 600;
 }
 
-.status.pending {
+.status.sent {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  color: white;
+  border: 1px solid #1e40af;
+  font-weight: 600;
+}
+
+.status.overdue {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: 1px solid #dc2626;
+  position: relative;
+  font-weight: 600;
+}
+
+.status.overdue::before {
+  content: '!';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #991b1b;
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2px solid white;
+}
+
+.status.cancelled {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: white;
+  border: 1px solid #4b5563;
+  position: relative;
+  font-weight: 600;
+}
+
+.status.cancelled::before {
+  content: '×';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #374151;
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2px solid white;
+}
+
+.status.sent {
   background: #fef9c3;
   color: #854d0e;
   border: 1px solid #fde68a;
@@ -547,6 +658,43 @@ watch(() => organizationStore.currentOrganization, () => {
   align-items: center;
   justify-content: center;
   font-weight: bold;
+}
+
+.status.cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  position: relative;
+}
+
+.status.cancelled::before {
+  content: '×';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #6b7280;
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.status.sent {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.status.draft {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
 }
 
 .actions {

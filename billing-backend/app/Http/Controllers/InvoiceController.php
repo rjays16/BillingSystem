@@ -54,9 +54,9 @@ class InvoiceController extends Controller
     {
         $organizationId = $this->getUserOrganizationId();
         
-        $invoice = $this->invoiceRepository->find($id);
+        $invoice = $this->invoiceRepository->findForTenant($id, $organizationId);
         
-        if (!$invoice || $invoice->organization_id !== $organizationId) {
+        if (!$invoice) {
             return response()->json([
                 'message' => 'Invoice not found'
             ], 404);

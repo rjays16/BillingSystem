@@ -48,6 +48,14 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Scope to query users for a specific tenant (organization)
+     */
+    public function scopeForTenant($query, $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
+    }
+
     public function organization()
     {
         return $this->belongsTo(Organization::class);

@@ -37,6 +37,11 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
             ->get();
     }
 
+    public function findForTenant(int $id, int $organizationId): ?object
+    {
+        return $this->model->forTenant($organizationId)->with('vendor')->find($id);
+    }
+
     public function findByNumber(string $number): ?object
     {
         return $this->model->with('vendor')->where('number', $number)->first();

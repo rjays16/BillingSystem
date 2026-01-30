@@ -71,10 +71,11 @@
             @change="onInputChange('status')"
           >
             <option value="">Select status</option>
-            <option value="Pending">Pending</option>
-            <option value="Paid">Paid</option>
-            <option value="Overdue">Overdue</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+            <option value="cancelled">Cancelled</option>
           </select>
           <span v-if="errors.status" class="error-text">{{ errors.status }}</span>
         </div>

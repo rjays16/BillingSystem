@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            // Department of Health - Admin
+            // Department of Health Users
             [
                 'name' => 'DOH Admin',
                 'email' => 'admin@doh.gov.ph',
@@ -34,8 +34,17 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'DOH Finance Officer',
+                'email' => 'finance@doh.gov.ph',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+                'organization_id' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
             
-            // Bureau of Internal Revenue - Admin
+            // Bureau of Internal Revenue Users
             [
                 'name' => 'BIR Admin',
                 'email' => 'admin@bir.gov.ph',
@@ -54,8 +63,17 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'name' => 'BIR Tax Specialist',
+                'email' => 'tax@bir.gov.ph',
+                'password' => Hash::make('password'),
+                'role' => 'accountant',
+                'organization_id' => 2,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
             
-            // Social Security System - Admin
+            // Social Security System Users
             [
                 'name' => 'SSS Admin',
                 'email' => 'admin@sss.gov.ph',
@@ -70,6 +88,15 @@ class UserSeeder extends Seeder
                 'email' => 'accountant@sss.gov.ph',
                 'password' => Hash::make('password'),
                 'role' => 'accountant',
+                'organization_id' => 3,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'SSS Branch Manager',
+                'email' => 'manager@sss.gov.ph',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
                 'organization_id' => 3,
                 'created_at' => now(),
                 'updated_at' => now(),

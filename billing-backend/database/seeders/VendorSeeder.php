@@ -13,7 +13,7 @@ class VendorSeeder extends Seeder
      */
     public function run(): void
     {
-        $vendors = [
+$vendors = [
             // Department of Health Vendors
             [
                 'organization_id' => 1,
@@ -37,6 +37,17 @@ class VendorSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'organization_id' => 1,
+                'name' => 'Emergency Equipment Suppliers',
+                'email' => 'emergency@eqsuppliers.com',
+                'phone' => '+63 2 8765-4321',
+                'address' => '789 Emergency Lane, Pasay City',
+                'tax_id' => 'TAX-003-EMR',
+                'active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
             
             // Bureau of Internal Revenue Vendors
             [
@@ -45,7 +56,7 @@ class VendorSeeder extends Seeder
                 'email' => 'contact@officesolutions.ph',
                 'phone' => '+63 2 8345-6789',
                 'address' => '789 Business Park, Quezon City',
-                'tax_id' => 'TAX-003-OFF',
+                'tax_id' => 'TAX-004-OFF',
                 'active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -56,7 +67,18 @@ class VendorSeeder extends Seeder
                 'email' => 'support@techequip.ph',
                 'phone' => '+63 2 8456-7890',
                 'address' => '101 Tech Hub, Pasig',
-                'tax_id' => 'TAX-004-TEC',
+                'tax_id' => 'TAX-005-TEC',
+                'active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'organization_id' => 2,
+                'name' => 'Government Furniture Makers',
+                'email' => 'orders@govfurniture.com',
+                'phone' => '+63 2 9546-1234',
+                'address' => '222 Furniture St, Mandaluyong',
+                'tax_id' => 'TAX-006-FUR',
                 'active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -69,7 +91,7 @@ class VendorSeeder extends Seeder
                 'email' => 'admin@docmgmt.ph',
                 'phone' => '+63 2 8567-8901',
                 'address' => '202 Document Center, Mandaluyong',
-                'tax_id' => 'TAX-005-DOC',
+                'tax_id' => 'TAX-007-DOC',
                 'active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -80,7 +102,18 @@ class VendorSeeder extends Seeder
                 'email' => 'maintenance@facility.com',
                 'phone' => '+63 2 8678-9012',
                 'address' => '303 Service Road, San Juan',
-                'tax_id' => 'TAX-006-FAC',
+                'tax_id' => 'TAX-008-FAC',
+                'active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'organization_id' => 3,
+                'name' => 'IT Infrastructure Solutions',
+                'email' => 'sales@itinfra.ph',
+                'phone' => '+63 2 7654-3210',
+                'address' => '505 Technology Ave, Makati',
+                'tax_id' => 'TAX-009-IT',
                 'active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),

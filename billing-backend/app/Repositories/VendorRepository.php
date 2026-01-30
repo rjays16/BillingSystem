@@ -3,15 +3,16 @@
 namespace App\Repositories;
 
 use App\Models\Vendor;
-use App\Repositories\BaseRepository;
 use App\Repositories\Interfaces\VendorRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 
-class VendorRepository extends BaseRepository implements VendorRepositoryInterface
+class VendorRepository implements VendorRepositoryInterface
 {
-    protected function getModel(): string
+    protected Vendor $model;
+
+    public function __construct(Vendor $vendor)
     {
-        return Vendor::class;
+        $this->model = $vendor;
     }
 
     public function all(): Collection
@@ -84,5 +85,5 @@ class VendorRepository extends BaseRepository implements VendorRepositoryInterfa
 
         return $vendor->delete();
     }
-}
-}
+
+    }
