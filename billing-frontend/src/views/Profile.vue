@@ -367,10 +367,16 @@ const saveProfile = async () => {
       email: formData.value.email,
       phone: formData.value.phone
     }
-    if (passwordData.value.currentPassword && passwordData.value.newPassword) {
+    if (
+      passwordData.value.currentPassword &&
+      passwordData.value.newPassword &&
+      passwordData.value.confirmPassword
+    ) {
       payload.current_password = passwordData.value.currentPassword
       payload.new_password = passwordData.value.newPassword
+      payload.new_password_confirmation = passwordData.value.confirmPassword
     }
+
 
     const response = await apiEndpoints.updateProfile(payload)
 
