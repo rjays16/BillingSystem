@@ -30,10 +30,16 @@ api.interceptors.response.use(
 )
 
 export default api
+export { api }
 
 export const apiEndpoints = {
-  getOrganizations: () => api.get('/api/organizations'),
+  login: (credentials) => api.post('/api/login', credentials),
+  logout: () => api.post('/api/logout'),
+  
   getCurrentUser: () => api.get('/api/user'),
+  updateProfile: (data) => api.put('/api/user/profile', data),
+  
+  getOrganizations: () => api.get('/api/organizations'),
   getOrganizationUsers: (orgId) => api.get(`/api/organizations/${orgId}/users`),
   
   getVendors: () => api.get('/api/vendors'),
@@ -47,14 +53,10 @@ export const apiEndpoints = {
   createUser: (data) => api.post('/api/users', data),
   updateUser: (id, data) => api.put(`/api/users/${id}`, data),
   deleteUser: (id) => api.delete(`/api/users/${id}`),
-  
+
   getInvoices: () => api.get('/api/invoices'),
   getInvoice: (id) => api.get(`/api/invoices/${id}`),
   createInvoice: (data) => api.post('/api/invoices', data),
   updateInvoice: (id, data) => api.put(`/api/invoices/${id}`, data),
   deleteInvoice: (id) => api.delete(`/api/invoices/${id}`),
-
-  login: (credentials) => api.post('/api/login', credentials),
-  logout: () => api.post('/api/logout'),
-  updateProfile: (data) => api.put('/api/user/profile', data),
 }
