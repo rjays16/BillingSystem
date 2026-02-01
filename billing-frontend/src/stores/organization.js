@@ -42,10 +42,8 @@ export const useOrganizationStore = defineStore('organization', {
     },
 
     async setCurrentOrganizationByAuth(authStore) {
-      console.log('Setting organization from auth:', authStore.user)
       const orgId = authStore.user?.organization_id || authStore.user?.organization?.id
       if (orgId) {
-        console.log('Found orgId:', orgId)
         await new Promise(resolve => setTimeout(resolve, 100))
         if (this.organizations.length === 0) {
           await this.loadOrganizations()

@@ -162,12 +162,7 @@ const confirmDelete = async () => {
 onMounted(async () => {
   loading.value = true
   try {
-    console.log('Loading vendors...')
     const result = await vendorStore.loadVendors()
-    console.log('Load result:', result)
-    console.log('Vendors from store:', vendorStore.vendors)
-    console.log('Vendor store loading:', vendorStore.loading)
-    console.log('Vendor store error:', vendorStore.error)
   } catch (error) {
     console.error('Failed to load vendors:', error)
     show('Failed to load vendors', 'error')

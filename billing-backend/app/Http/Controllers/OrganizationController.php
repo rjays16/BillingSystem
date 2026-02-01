@@ -41,6 +41,9 @@ class OrganizationController extends Controller
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'currency' => 'nullable|string|max:3',
+            'payment_terms' => 'nullable|integer|min:1|max:365',
         ]);
 
         $organization = $this->organizationRepository->create($validated);
@@ -84,6 +87,14 @@ class OrganizationController extends Controller
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'currency' => 'nullable|string|max:3',
+            'payment_terms' => 'nullable|integer|min:1|max:365',
+        ]);
+
+        \Log::info('Updating organization', [
+            'id' => $id,
+            'validated_data' => $validated
         ]);
 
         $organization = $this->organizationRepository->update($id, $validated);
@@ -94,6 +105,10 @@ class OrganizationController extends Controller
                 'message' => 'Organization not found'
             ], 404);
         }
+
+        \Log::info('Organization updated successfully', [
+            'organization' => $organization->toArray()
+        ]);
 
         return response()->json([
             'success' => true,

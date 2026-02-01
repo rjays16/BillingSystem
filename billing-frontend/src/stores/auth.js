@@ -35,7 +35,6 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     async login(credentials) {
-      console.log('Auth store login called with:', credentials)
       try {
         const response = await apiEndpoints.login(credentials)
         
@@ -47,8 +46,6 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('auth-token', this.token)
         localStorage.setItem('is-authenticated', 'true')
         localStorage.setItem('session-start', this.loginTime.toString())
-        
-        console.log('Token stored in localStorage:', localStorage.getItem('auth-token'))
         
         return { success: true, user: response.data.user }
       } catch (error) {

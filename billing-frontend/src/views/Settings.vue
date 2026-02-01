@@ -120,7 +120,7 @@
               <label for="taxRate">Default Tax Rate (%)</label>
               <input 
                 id="taxRate"
-                v-model.number="formData.taxRate" 
+                v-model.number="formData.tax_rate" 
                 type="number"
                 min="0"
                 max="100"
@@ -141,7 +141,7 @@
               <label for="paymentTerms">Payment Terms (days)</label>
               <input 
                 id="paymentTerms"
-                v-model.number="formData.paymentTerms" 
+                v-model.number="formData.payment_terms" 
                 type="number"
                 min="1"
                 max="365"
@@ -165,10 +165,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useToast } from '../composables/useToast'
+import { ref, onMounted } from 'vue'
 import AppLayout from '../layouts/AppLayout.vue'
+import { apiEndpoints } from '../services/api'
 import { useAuthStore } from '../stores/auth'
+import { useToast } from '../composables/useToast'
 import { useOrganizationStore } from '../stores/organization'
 
 const { show } = useToast()
@@ -185,12 +186,16 @@ const formData = ref({
   address: '',
   phone: '',
   email: '',
-  taxRate: 12,
+  tax_rate: 12.00,
   currency: 'PHP',
-  paymentTerms: 30
+  payment_terms: 30
 })
 
-onMounted(() => {
+onMounted(async () => {
+  if (organizationStore.organizations.length === 0) {
+    await organizationStore.loadOrganizations()
+  }
+  
   if (organizationStore.currentOrganization) {
     loadCurrentOrganization()
   }
@@ -205,9 +210,9 @@ const loadCurrentOrganization = () => {
     address: org.address || '',
     phone: org.phone || '',
     email: org.email || '',
-    taxRate: org.taxRate || 12,
+    tax_rate: org.tax_rate || org.taxRate || 12.00,
     currency: org.currency || 'PHP',
-    paymentTerms: org.paymentTerms || 30
+    payment_terms: org.payment_terms || org.paymentTerms || 30
   }
 }
 
@@ -228,8 +233,6 @@ const validateField = (field) => {
         errors.value.code = 'Organization code is required'
       } else if (formData.value.code.trim().length < 2) {
         errors.value.code = 'Code must be at least 2 characters'
-      } else if (!/^[A-Z0-9]+$/.test(formData.value.code.trim())) {
-        errors.value.code = 'Code must contain only letters and numbers'
       }
       break
       
@@ -248,52 +251,78 @@ const validateForm = () => {
   validateField('code')
   validateField('email')
   
-  return Object.keys(errors.value).length === 0
+  return Object.keys(errors.value).every(key => !errors.value[key])
 }
 
 const isValidEmail = (email) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+const resetForm = () => {
+  loadCurrentOrganization()
+  errors.value = {}
+  show('Form reset to current organization data', 'info')
+}
+
 const saveSettings = async () => {
+  
   if (!validateForm()) {
-    show('Please fix the errors before saving', 'error')
+    show('Please fix errors before saving', 'error')
+    return
+  }
+  
+  if (!organizationStore.currentOrganization?.id) {
+    show('No organization selected', 'error')
     return
   }
   
   isSaving.value = true
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const orgId = organizationStore.currentOrganization.id
     
-    const updatedOrg = {
-      ...organizationStore.currentOrganization,
-      ...formData.value
+    const payload = {
+      name: formData.value.name,
+      code: formData.value.code,
+      description: formData.value.description,
+      address: formData.value.address,
+      phone: formData.value.phone,
+      email: formData.value.email,
+      tax_rate: formData.value.tax_rate,
+      currency: formData.value.currency,
+      payment_terms: formData.value.payment_terms
     }
+
+    const response = await apiEndpoints.updateOrganization(orgId, payload)
     
-    organizationStore.currentOrganization = updatedOrg
-    localStorage.setItem('current-organization', JSON.stringify(updatedOrg))
-    
-    const orgIndex = organizationStore.organizations.findIndex(
-      org => org.id === updatedOrg.id
-    )
-    if (orgIndex !== -1) {
-      organizationStore.organizations[orgIndex] = updatedOrg
+
+    if (response.data.success && response.data.data) {
+      const updatedOrg = response.data.data
+      
+      organizationStore.currentOrganization = updatedOrg
+      localStorage.setItem('current-organization', JSON.stringify(updatedOrg))
+      
+      const orgIndex = organizationStore.organizations.findIndex(
+        org => org.id === updatedOrg.id
+      )
+      if (orgIndex !== -1) {
+        organizationStore.organizations[orgIndex] = updatedOrg
+      }
+
+      show('Organization settings saved successfully!', 'success')
+    } else {
+      show(response.data.message || 'Failed to update organization', 'error')
     }
-    
-    show('Organization settings saved successfully!', 'success')
   } catch (error) {
-    console.error('Error saving settings:', error)
-    show('Failed to save settings. Please try again.', 'error')
+    console.error('Error:', error)
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.errors?.code?.[0] ||
+                        error.response?.data?.errors?.email?.[0] ||
+                        'Failed to save settings. Please try again.'
+    show(errorMessage, 'error')
   } finally {
     isSaving.value = false
   }
-}
-
-const resetForm = () => {
-  loadCurrentOrganization()
-  errors.value = {}
-  show('Form reset to current organization data', 'info')
 }
 </script>
 

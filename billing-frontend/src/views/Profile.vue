@@ -223,7 +223,6 @@ const loadUserProfile = () => {
 const loadCurrentUserFromAPI = async () => {
   try {
     const response = await apiEndpoints.getCurrentUser()
-    console.log('Fresh user data from API:', response.data)
     
     if (response.data && response.data.user) {
       authStore.user = response.data.user
@@ -234,7 +233,6 @@ const loadCurrentUserFromAPI = async () => {
         phone: response.data.user.phone || ''
       }
       
-      console.log('Updated form data from API:', formData.value)
     }
   } catch (error) {
     console.error('Failed to load current user from API:', error)
