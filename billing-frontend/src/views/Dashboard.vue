@@ -97,9 +97,9 @@
       <section class="content-section">
         <h2>Activity</h2>
 
-        <div v-if="activities.length === 0" class="empty-state">
-          <p>No activity to display yet.</p>
-          <span>This section will show recent actions once data is available.</span>
+        <div v-if="activities.length === 0" class="realtime-status">
+          <i class="bi bi-activity"></i>
+          <p>Real-time monitoring active</p>
         </div>
 
         <ul v-else class="activity-list">
@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
@@ -128,19 +128,21 @@ const dashboardData = ref({})
 
 const fetchDashboardData = async () => {
   try {
-    const invoicesResponse = await apiEndpoints.getInvoices()
-    await organizationStore.loadOrganizations()
+    const [invoicesResponse, vendorsResponse] = await Promise.all([
+      apiEndpoints.getInvoices(),
+      apiEndpoints.getVendors()
+    ])
     
     return {
       invoices: invoicesResponse.data?.data || [],
-      organizations: organizationStore.organizations || [],
+      vendors: vendorsResponse.data?.data || [],
       currentUser: authStore.user || null,
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
     return {
       invoices: [],
-      organizations: organizationStore.organizations || [],
+      vendors: [],
       currentUser: authStore.user || null,
     }
   }
@@ -156,7 +158,7 @@ const organizationInvoices = computed(() => {
 })
 
 const totalVendors = computed(() => {
-  return (dashboardData.value.organizations || []).length
+  return (dashboardData.value.vendors || []).length
 })
 
 const totalInvoices = computed(() => organizationInvoices.value.length)
@@ -199,11 +201,81 @@ const quickActions = computed(() => {
   }
 })
 
-const activities = [
-  { id: 1, message: 'Invoice INV-001 created', time: '2 hours ago' },
-  { id: 2, message: 'Vendor ABC Corp added', time: 'Yesterday' },
-  { id: 3, message: 'Payment received for INV-003', time: '2 days ago' },
-]
+const activities = ref([])
+
+const refreshDashboardData = async () => {
+  if (!organizationStore.currentOrganization?.id) return
+  
+  console.log('Refreshing dashboard data from database...')
+  dashboardData.value = await fetchDashboardData()
+  
+  generateActivities()
+}
+
+const generateActivities = () => {
+  const invoices = dashboardData.value.invoices || []
+  const vendors = dashboardData.value.vendors || []
+  
+  console.log('Generating activities from real data:')
+  console.log('Raw invoices:', JSON.stringify(invoices, null, 2))
+  console.log('Raw vendors:', JSON.stringify(vendors, null, 2))
+  
+  const allActivities = []
+  
+  invoices.forEach((invoice) => {    
+    if (invoice.created_at) {
+      const id = invoice.id || 'unknown'
+      const number = invoice.invoice_number || invoice.number || id
+      
+      allActivities.push({
+        id: `inv-${id}`,
+        message: `Invoice ${number} created`,
+        time: getTimeAgo(invoice.created_at),
+        timestamp: new Date(invoice.created_at)
+      })
+    }
+  })
+  
+  vendors.forEach((vendor) => {
+    if (vendor.created_at) {
+      allActivities.push({
+        id: `vendor-${vendor.id}`,
+        message: `Vendor ${vendor.name} added`,
+        time: getTimeAgo(vendor.created_at),
+        timestamp: new Date(vendor.created_at)
+      })
+    }
+  })
+  
+  activities.value = allActivities.slice(0, 5)
+}
+
+const getTimeAgo = (dateString) => {
+  if (!dateString) return 'Unknown time'
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffMins < 60) return `${diffMins} minutes ago`
+  if (diffHours < 24) return `${diffHours} hours ago`
+  if (diffDays < 7) return `${diffDays} days ago`
+  return date.toLocaleDateString()
+}
+
+const compareTimeAgo = (timeA, timeB) => {
+  const timeOrder = ['minutes', 'hours', 'days']
+  for (const unit of timeOrder) {
+    const hasA = timeA.includes(unit)
+    const hasB = timeB.includes(unit)
+    if (hasA && !hasB) return -1
+    if (!hasA && hasB) return 1
+  }
+  return 0
+}
 
 onMounted(async () => {
   await authStore.initializeAuth()
@@ -211,7 +283,18 @@ onMounted(async () => {
     return
   }
   await organizationStore.initializeOrganization()
-  dashboardData.value = await fetchDashboardData()
+  await refreshDashboardData()
+  
+  const dashboardInterval = setInterval(async () => {
+    await refreshDashboardData()
+  }, 30000)
+  
+  window.addEventListener('dashboardRefresh', refreshDashboardData)
+  
+  onBeforeUnmount(() => {
+    clearInterval(dashboardInterval)
+    window.removeEventListener('dashboardRefresh', refreshDashboardData)
+  })
 })
 
 
@@ -297,21 +380,36 @@ const handleQuickAction = (action) => {
 }
 
 /* Activity */
-.empty-state {
+.empty-state, .realtime-status {
   text-align: center;
   padding: 3rem 1rem;
   border: 2px dashed #e5e7eb;
   border-radius: 12px;
 }
 
-.empty-state p {
+.empty-state p, .realtime-status p {
   font-weight: 600;
   color: #374151;
 }
 
-.empty-state span {
+.empty-state span, .realtime-status span {
   font-size: 0.85rem;
   color: #9ca3af;
+}
+
+.realtime-status {
+  border: 2px solid #667eea;
+  background: #f8faff;
+}
+
+.realtime-status i {
+  color: #667eea;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.realtime-status p {
+  color: #667eea;
 }
 
 .activity-list {

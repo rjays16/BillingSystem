@@ -410,10 +410,14 @@ const saveInvoice = async (data) => {
         invoices.value[index] = response.data.data
       }
 
+      window.dispatchEvent(new CustomEvent('dashboardRefresh'))
+      
       show('Invoice updated successfully', 'success')
     } else {
       const response = await apiEndpoints.createInvoice(data)
       invoices.value.unshift(response.data.data)
+      window.dispatchEvent(new CustomEvent('dashboardRefresh'))
+      
       show('Invoice created successfully', 'success')
     }
 

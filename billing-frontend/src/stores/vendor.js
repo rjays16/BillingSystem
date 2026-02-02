@@ -56,6 +56,9 @@ export const useVendorStore = defineStore('vendor', {
         const response = await apiEndpoints.createVendor(vendorData)
         const newVendor = response.data.data || response.data
         this.vendors.push(newVendor)
+        
+        window.dispatchEvent(new CustomEvent('dashboardRefresh'))
+        
         return { success: true, data: newVendor }
       } catch (error) {
         console.error('Error creating vendor:', error)
@@ -79,6 +82,8 @@ export const useVendorStore = defineStore('vendor', {
           this.vendors[index] = updatedVendor
         }
         
+        window.dispatchEvent(new CustomEvent('dashboardRefresh'))
+        
         return { success: true, data: updatedVendor }
       } catch (error) {
         console.error('Error updating vendor:', error)
@@ -100,6 +105,8 @@ export const useVendorStore = defineStore('vendor', {
         if (index !== -1) {
           this.vendors.splice(index, 1)
         }
+        
+        window.dispatchEvent(new CustomEvent('dashboardRefresh'))
         
         return { success: true }
       } catch (error) {
