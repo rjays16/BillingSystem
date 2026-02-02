@@ -60,7 +60,8 @@ export const useOrganizationStore = defineStore('organization', {
       const stored = localStorage.getItem('current-organization')
       if (stored) {
         try {
-          this.currentOrganization = JSON.parse(stored)
+          const parsed = JSON.parse(stored)
+          this.currentOrganization = parsed
         } catch (error) {
           console.error('Error parsing stored organization:', error)
           localStorage.removeItem('current-organization')

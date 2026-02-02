@@ -289,6 +289,13 @@ onMounted(() => {
     localStorage.setItem('auth-user', JSON.stringify(event.detail))
   })
   
+  window.addEventListener('organizationUpdated', (event) => {
+    if (event.detail) {
+      organizationStore.currentOrganization = event.detail
+      localStorage.setItem('current-organization', JSON.stringify(event.detail))
+    }
+  })
+  
   startSessionTimeoutCheck()
 })
 

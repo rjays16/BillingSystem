@@ -29,6 +29,11 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
         return Organization::where('name', $name)->first();
     }
 
+    public function findById(int $id): ?Organization
+    {
+        return Organization::find($id);
+    }
+
     public function getTenantUsers(int $organizationId): Collection
     {
         return Organization::find($organizationId)?->users ?? collect();

@@ -14,9 +14,19 @@
         </div>
       </div>
 
-      <div class="org-context" v-if="organizationStore.currentOrganization">
-        <i class="bi bi-building"></i>
-        <span>Currently configuring: <strong>{{ organizationStore.organizationName }}</strong></span>
+      <div class="settings-card">
+        <div class="settings-header">
+          <div class="org-avatar-large">
+            <i class="bi bi-building"></i>
+          </div>
+          <div class="org-info-header">
+            <h2>{{ organizationStore.organizationName }}</h2>
+            <p class="org-details">
+              <i class="bi bi-gear"></i>
+              Organization Configuration • {{ formData.code }}
+            </p>
+          </div>
+        </div>
       </div>
 
       <form @submit.prevent="saveSettings" class="settings-form">
@@ -165,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import AppLayout from '../layouts/AppLayout.vue'
 import { apiEndpoints } from '../services/api'
 import { useAuthStore } from '../stores/auth'
@@ -195,14 +205,23 @@ onMounted(async () => {
   if (organizationStore.organizations.length === 0) {
     await organizationStore.loadOrganizations()
   }
-  
-  if (organizationStore.currentOrganization) {
+
+  if (organizationStore.currentOrganization?.id) {
+    await loadOrganizationFromAPI()
+  } else {
     loadCurrentOrganization()
   }
+  
+  watch(() => organizationStore.currentOrganization, (newOrg) => {
+    if (newOrg && !hasUnsavedChanges()) {
+      loadCurrentOrganization()
+    }
+  }, { deep: true })
 })
 
 const loadCurrentOrganization = () => {
   const org = organizationStore.currentOrganization
+  
   formData.value = {
     name: org.name || '',
     code: org.code || '',
@@ -214,6 +233,40 @@ const loadCurrentOrganization = () => {
     currency: org.currency || 'PHP',
     payment_terms: org.payment_terms || org.paymentTerms || 30
   }
+}
+
+const loadOrganizationFromAPI = async () => {
+  try {
+    const orgId = organizationStore.currentOrganization.id
+    const response = await apiEndpoints.getOrganization(orgId)
+    
+    if (response.data && response.data.data) {
+      const updatedOrg = response.data.data
+      console.log('Fresh organization data from API:', updatedOrg)
+      
+      organizationStore.currentOrganization = updatedOrg
+      localStorage.setItem('current-organization', JSON.stringify(updatedOrg))
+      
+      loadCurrentOrganization()
+    }
+  } catch (error) {
+    console.error('Failed to load organization from API:', error)
+  }
+}
+
+const hasUnsavedChanges = () => {
+  const org = organizationStore.currentOrganization
+  return (
+    formData.value.name !== (org?.name || '') ||
+    formData.value.code !== (org?.code || '') ||
+    formData.value.description !== (org?.description || '') ||
+    formData.value.address !== (org?.address || '') ||
+    formData.value.phone !== (org?.phone || '') ||
+    formData.value.email !== (org?.email || '') ||
+    formData.value.tax_rate !== (org?.tax_rate || org?.taxRate || 12.00) ||
+    formData.value.currency !== (org?.currency || 'PHP') ||
+    formData.value.payment_terms !== (org?.payment_terms || org?.paymentTerms || 30)
+  )
 }
 
 const validateField = (field) => {
@@ -308,7 +361,9 @@ const saveSettings = async () => {
       if (orgIndex !== -1) {
         organizationStore.organizations[orgIndex] = updatedOrg
       }
-
+      
+      window.dispatchEvent(new CustomEvent('organizationUpdated', { detail: updatedOrg }))
+      
       show('Organization settings saved successfully!', 'success')
     } else {
       show(response.data.message || 'Failed to update organization', 'error')
@@ -373,22 +428,52 @@ const saveSettings = async () => {
   max-width: 900px;
 }
 
-.org-context {
+.settings-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  color: white;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.org-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.org-info-header h2 {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.org-info-header p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 10px;
-  padding: 1rem 1.5rem;
-  margin-bottom: 2rem;
-  color: #0c4a6e;
-  font-weight: 500;
 }
 
-.org-context i {
-  color: #0284c7;
-  font-size: 1.25rem;
+.org-info-header p i {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .settings-form {

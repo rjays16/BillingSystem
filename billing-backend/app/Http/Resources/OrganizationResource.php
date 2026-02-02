@@ -22,6 +22,9 @@ class OrganizationResource extends JsonResource
             'address' => $this->address,
             'phone' => $this->phone,
             'email' => $this->email,
+            'tax_rate' => $this->tax_rate,
+            'currency' => $this->currency,
+            'payment_terms' => $this->payment_terms,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
