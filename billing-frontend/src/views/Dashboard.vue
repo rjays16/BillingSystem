@@ -205,8 +205,6 @@ const activities = ref([])
 
 const refreshDashboardData = async () => {
   if (!organizationStore.currentOrganization?.id) return
-  
-  console.log('Refreshing dashboard data from database...')
   dashboardData.value = await fetchDashboardData()
   
   generateActivities()
@@ -215,10 +213,6 @@ const refreshDashboardData = async () => {
 const generateActivities = () => {
   const invoices = dashboardData.value.invoices || []
   const vendors = dashboardData.value.vendors || []
-  
-  console.log('Generating activities from real data:')
-  console.log('Raw invoices:', JSON.stringify(invoices, null, 2))
-  console.log('Raw vendors:', JSON.stringify(vendors, null, 2))
   
   const allActivities = []
   

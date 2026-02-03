@@ -60,7 +60,8 @@ class OrganizationController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $organization = $this->organizationRepository->findById($id);
+        
+        $organization = $this->organizationRepository->find($id);
         
         if (!$organization) {
             return response()->json([
@@ -92,11 +93,6 @@ class OrganizationController extends Controller
             'payment_terms' => 'nullable|integer|min:1|max:365',
         ]);
 
-        \Log::info('Updating organization', [
-            'id' => $id,
-            'validated_data' => $validated
-        ]);
-
         $organization = $this->organizationRepository->update($id, $validated);
         
         if (!$organization) {
@@ -105,10 +101,6 @@ class OrganizationController extends Controller
                 'message' => 'Organization not found'
             ], 404);
         }
-
-        \Log::info('Organization updated successfully', [
-            'organization' => $organization->toArray()
-        ]);
 
         return response()->json([
             'success' => true,

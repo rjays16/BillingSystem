@@ -69,3 +69,5 @@ Follow the steps below to run the backend locally:
 -   chmod +x run
 -   ./run artisan key:generate
 -   ./run migrate:fresh
+-   ./run artisan config:clear
+-   ./run artisan route:clear

@@ -15,22 +15,16 @@ return new class extends Migration
             $table->id();
             $table->foreignId('organization_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email');
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
-            $table->string('tax_id')->nullable();
-            $table->boolean('active')->default(true);
+	        $table->string('tax_id')->nullable();
+            $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
             
-            // Indexes for tenant isolation
             $table->index('organization_id');
             $table->index('email');
-            $table->index('active');
-        });
-        
-        // Add foreign key to invoices after vendors table is created
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->foreign('vendor_id')->references('id')->on('vendors')->onDelete('set null');
+            $table->index('status');
         });
     }
 
@@ -39,9 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->dropForeign(['vendor_id']);
-        });
         Schema::dropIfExists('vendors');
     }
 };

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Invoice;
 
 class Vendor extends Model
 {
-    use HasFactory, HasUlids;
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -44,6 +45,6 @@ class Vendor extends Model
      */
     public function invoices()
     {
-        return $this->hasMany(\App\Models\Invoice::class);
+        return $this->hasMany(Invoice::class);
     }
 }

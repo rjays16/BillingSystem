@@ -242,7 +242,6 @@ const loadOrganizationFromAPI = async () => {
     
     if (response.data && response.data.data) {
       const updatedOrg = response.data.data
-      console.log('Fresh organization data from API:', updatedOrg)
       
       organizationStore.currentOrganization = updatedOrg
       localStorage.setItem('current-organization', JSON.stringify(updatedOrg))
