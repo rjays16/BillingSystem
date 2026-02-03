@@ -14,12 +14,11 @@
           <input
             v-model="form.number"
             type="text"
-            placeholder="INV-001"
+            placeholder="DOH-2024-001"
             required
             :class="{ 'error': errors.number }"
             @blur="validateField('number')"
             @input="onInputChange('number')"
-            style="text-transform: uppercase"
           />
           <span v-if="errors.number" class="error-text">{{ errors.number }}</span>
         </div>
@@ -27,11 +26,11 @@
         <div class="form-group">
           <label>Vendor *</label>
           <select 
-            v-model="form.vendorId" 
+            v-model="form.vendor_id" 
             required
-            :class="{ 'error': errors.vendorId }"
-            @blur="validateField('vendorId')"
-            @change="onInputChange('vendorId')"
+            :class="{ 'error': errors.vendor_id }"
+            @blur="validateField('vendor_id')"
+            @change="onInputChange('vendor_id')"
           >
             <option value="">Select a vendor</option>
             <option
@@ -42,7 +41,7 @@
               {{ vendor.name }}
             </option>
           </select>
-          <span v-if="errors.vendorId" class="error-text">{{ errors.vendorId }}</span>
+          <span v-if="errors.vendor_id" class="error-text">{{ errors.vendor_id }}</span>
         </div>
 
         <div class="form-group">
@@ -51,7 +50,7 @@
             v-model.number="form.amount"
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             placeholder="0.00"
             required
             :class="{ 'error': errors.amount }"
@@ -94,6 +93,33 @@
           <span v-if="errors.date" class="error-text">{{ errors.date }}</span>
         </div>
 
+        <div class="form-group">
+          <label>Due Date</label>
+          <input
+            v-model="form.due_date"
+            type="date"
+            :class="{ 'error': errors.due_date }"
+            @blur="validateField('due_date')"
+            @change="onInputChange('due_date')"
+            :min="form.date || undefined"
+          />
+          <span v-if="errors.due_date" class="error-text">{{ errors.due_date }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea
+            v-model="form.notes"
+            rows="3"
+            placeholder="Additional notes (optional)"
+            :class="{ 'error': errors.notes }"
+            @blur="validateField('notes')"
+            @input="onInputChange('notes')"
+            maxlength="2000"
+          ></textarea>
+          <span v-if="errors.notes" class="error-text">{{ errors.notes }}</span>
+        </div>
+
         <div class="form-actions">
           <button 
             type="button" 
@@ -118,8 +144,8 @@
 </template>
 
 <script setup>
-import { reactive, watch, computed, ref } from 'vue'
-import { vendors } from '../data/mockData'
+import { reactive, watch, computed, ref, onMounted } from 'vue'
+import { useVendorStore } from '../stores/vendor'
 
 const props = defineProps({
   invoice: Object,
@@ -127,22 +153,29 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'close'])
 
+const vendorStore = useVendorStore()
 const isSubmitting = ref(false)
+
+const vendors = computed(() => vendorStore.vendors)
 
 const form = reactive({
   number: '',
-  vendorId: '',
+  vendor_id: '',
   amount: 0,
-  status: 'Pending',
+  status: 'draft',
   date: '',
+  due_date: '',
+  notes: ''
 })
 
 const errors = reactive({
   number: '',
-  vendorId: '',
+  vendor_id: '',
   amount: '',
   status: '',
-  date: ''
+  date: '',
+  due_date: '',
+  notes: ''
 })
 
 const isEdit = computed(() => !!props.invoice)
@@ -156,29 +189,26 @@ const clearErrors = () => {
 const validateField = (field) => {
   switch (field) {
     case 'number':
-      const trimmedNumber = form.number.trim().toUpperCase()
+      const trimmedNumber = form.number.trim()
       if (!trimmedNumber) {
         errors.number = 'Invoice number is required'
-      } else if (trimmedNumber.length < 5) {
-        errors.number = 'Invoice number must be at least 5 characters'
-      } else if (trimmedNumber.length > 20) {
-        errors.number = 'Invoice number must be less than 20 characters'
-      } else if (!/^[A-Z]{2,6}-\d{4}-\d{3}$/.test(trimmedNumber)) {
-        errors.number = 'Format: PREFIX-YYYY-XXX (e.g. DOH-2024-001, INV-2025-010)'
+      } else if (trimmedNumber.length < 3) {
+        errors.number = 'Invoice number must be at least 3 characters'
+      } else if (trimmedNumber.length > 255) {
+        errors.number = 'Invoice number must be less than 255 characters'
       } else {
         errors.number = ''
       }
-      form.number = trimmedNumber
       break
-    case 'vendorId':
-      if (!form.vendorId) {
-        errors.vendorId = 'Please select a vendor'
-      } else if (isNaN(Number(form.vendorId))) {
-        errors.vendorId = 'Please select a valid vendor'
+      
+    case 'vendor_id':
+      if (!form.vendor_id) {
+        errors.vendor_id = 'Please select a vendor'
       } else {
-        errors.vendorId = ''
+        errors.vendor_id = ''
       }
       break
+      
     case 'amount':
       if (!form.amount || form.amount <= 0) {
         errors.amount = 'Amount must be greater than 0'
@@ -192,40 +222,67 @@ const validateField = (field) => {
         errors.amount = ''
       }
       break
+      
     case 'status':
       if (!form.status) {
         errors.status = 'Please select a status'
-      } else if (!['Pending', 'Paid', 'Overdue', 'Cancelled'].includes(form.status)) {
+      } else if (!['draft', 'sent', 'paid', 'overdue', 'cancelled'].includes(form.status)) {
         errors.status = 'Please select a valid status'
       } else {
         errors.status = ''
       }
       break
+      
     case 'date':
       if (!form.date) {
         errors.date = 'Invoice date is required'
       } else {
         const selectedDate = new Date(form.date)
         const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const oneYearAgo = new Date()
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+        today.setHours(23, 59, 59, 999)
         
         if (selectedDate > today) {
           errors.date = 'Invoice date cannot be in the future'
-        } else if (selectedDate < oneYearAgo) {
-          errors.date = 'Invoice date cannot be more than 1 year old'
         } else {
           errors.date = ''
         }
+      }
+      break
+      
+    case 'due_date':
+      if (form.due_date && form.date) {
+        const dueDate = new Date(form.due_date)
+        const invoiceDate = new Date(form.date)
+        
+        if (dueDate < invoiceDate) {
+          errors.due_date = 'Due date must be after or equal to invoice date'
+        } else {
+          errors.due_date = ''
+        }
+      }
+      break
+      
+    case 'notes':
+      if (form.notes && form.notes.length > 2000) {
+        errors.notes = 'Notes cannot exceed 2000 characters'
+      } else {
+        errors.notes = ''
       }
       break
   }
 }
 
 const validateForm = () => {
-  const fields = ['number', 'vendorId', 'amount', 'status', 'date']
+  const fields = ['number', 'vendor_id', 'amount', 'status', 'date']
   fields.forEach(field => validateField(field))
+  
+  if (form.due_date) {
+    validateField('due_date')
+  }
+  
+  if (form.notes) {
+    validateField('notes')
+  }
   
   return !Object.values(errors).some(error => error !== '')
 }
@@ -233,19 +290,6 @@ const validateForm = () => {
 const onInputChange = (field) => {
   if (errors[field]) {
     errors[field] = ''
-  }
-
-  if (field === 'number') {
-    const value = form.number.trim().toUpperCase()
-    form.number = value 
-    
-    if (value.length > 0 && value.length < 5) {
-      errors.number = 'Too short - minimum 5 characters'
-    } else if (value.length > 20) {
-      errors.number = 'Too long - maximum 20 characters'
-    } else if (value.length > 0 && !/^[A-Z]/.test(value)) {
-      errors.number = 'Must start with letters'
-    }
   }
   
   if (field === 'amount' && form.amount > 0) {
@@ -259,80 +303,61 @@ const onInputChange = (field) => {
   if (field === 'date' && form.date) {
     const selectedDate = new Date(form.date)
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setHours(23, 59, 59, 999)
     
     if (selectedDate > today) {
       errors.date = 'Future dates not allowed'
     }
-  }
-}
-
-const checkInvoiceNumberUniqueness = async (invoiceNumber) => {
-  const existingInvoices = [
-    { id: 1, number: 'INV-001' },
-    { id: 2, number: 'INV-002' },
-    { id: 3, number: 'INV-003' }
-  ]
-
-  if (props.invoice && props.invoice.number === invoiceNumber) {
-    return true
-  }
-
-  await new Promise(resolve => setTimeout(resolve, 300))
-  const isUnique = !existingInvoices.some(inv => inv.number === invoiceNumber)
-  
-  if (!isUnique) {
-    errors.number = 'Invoice number already exists'
-    return false
+    
+    if (form.due_date) {
+      validateField('due_date')
+    }
   }
   
-  return true
+  if (field === 'due_date' && form.due_date && form.date) {
+    const dueDate = new Date(form.due_date)
+    const invoiceDate = new Date(form.date)
+    
+    if (dueDate < invoiceDate) {
+      errors.due_date = 'Due date must be after invoice date'
+    }
+  }
 }
 
 const submit = async () => {
+  console.log('🔵 InvoiceForm submit called!')
+  
   if (!validateForm()) {
+    console.log('❌ Validation failed:', errors)
     const firstErrorField = Object.keys(errors).find(field => errors[field])
     if (firstErrorField) {
-      const element = document.querySelector(`[v-model*="${firstErrorField}"], select[v-model*="${firstErrorField}"]`)
+      const element = document.querySelector(`[v-model*="${firstErrorField}"]`)
       if (element) element.focus()
     }
     return
   }
 
+  console.log('✅ Validation passed, emitting save event...')
+
   isSubmitting.value = true
 
   try {
-    if (!props.invoice) {
-      const isUnique = await checkInvoiceNumberUniqueness(form.number.trim().toUpperCase())
-      if (!isUnique) {
-        isSubmitting.value = false
-        return
-      }
-    }
-
-    if (form.status === 'Paid' && !props.invoice) {
-    }
-
-    if (form.status === 'Overdue') {
-      const invoiceDate = new Date(form.date)
-      const today = new Date()
-      const daysSinceInvoice = Math.floor((today - invoiceDate) / (1000 * 60 * 60 * 24))
-      
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    emit('save', {
-      number: form.number.trim().toUpperCase(),
-      vendor_id: Number(form.vendorId),
-      amount: form.amount,
+    const invoiceData = {
+      number: form.number.trim(),
+      vendor_id: Number(form.vendor_id),
+      amount: Number(form.amount),
       status: form.status,
-      due_date: form.date,
-      invoice_date: form.date
-    })
+      date: form.date,
+      due_date: form.due_date || null,
+      notes: form.notes.trim() || null
+    }
+    
+    console.log('📤 Sending invoice data:', invoiceData)
+    
+    emit('save', invoiceData)
 
   } catch (error) {
-    console.error('Error saving invoice:', error)
+    console.error('💥 Error in submit:', error)
     
     if (error.response?.status === 422) {
       const serverErrors = error.response.data.errors
@@ -343,9 +368,6 @@ const submit = async () => {
       })
     } else if (error.response?.status === 409) {
       errors.number = 'Invoice number already exists'
-    } else {
-      const errorMessage = error.response?.data?.message || 'An error occurred while saving the invoice'
-      console.error(errorMessage)
     }
   } finally {
     isSubmitting.value = false
@@ -356,27 +378,32 @@ watch(
   () => props.invoice,
   (val) => {
     if (val) {
-      Object.assign(form, val)
+      form.number = val.number || ''
+      form.vendor_id = val.vendor_id || ''
+      form.amount = val.amount || 0
+      form.status = val.status || 'draft'
+      form.date = val.date || ''
+      form.due_date = val.due_date || ''
+      form.notes = val.notes || ''
     } else {
       form.number = ''
-      form.vendorId = ''
+      form.vendor_id = ''
       form.amount = 0
-      form.status = 'Pending'
+      form.status = 'draft'
       form.date = new Date().toISOString().split('T')[0]
+      form.due_date = ''
+      form.notes = ''
     }
     clearErrors()
   },
   { immediate: true }
 )
 
-watch(
-  () => form.number,
-  (newValue) => {
-    if (newValue) {
-      form.number = newValue.toUpperCase().replace(/[^A-Z0-9-]/g, '')
-    }
+onMounted(async () => {
+  if (vendors.value.length === 0) {
+    await vendorStore.loadVendors()
   }
-)
+})
 </script>
 
 <style scoped>
@@ -452,29 +479,39 @@ form {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   font-size: 0.9375rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .form-group input.error,
-.form-group select.error {
+.form-group select.error,
+.form-group textarea.error {
   border-color: #ef4444;
 }
 
 .form-group input.error:focus,
-.form-group select.error:focus {
+.form-group select.error:focus,
+.form-group textarea.error:focus {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
@@ -485,8 +522,6 @@ form {
   margin-top: 0.375rem;
   font-weight: 500;
 }
-
-
 
 .form-actions {
   display: flex;
@@ -530,7 +565,7 @@ form {
   border: 1px solid #e5e7eb;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: #f3f4f6;
 }
 
@@ -547,7 +582,6 @@ form {
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
-  margin-right: 0.5rem;
 }
 
 @keyframes spin {

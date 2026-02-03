@@ -9,6 +9,10 @@
     <div v-else class="invoice-content">
       <div class="invoice-header">
         <div>
+          <button @click="goBack" class="back-btn">
+            <i class="bi bi-arrow-left"></i>
+            Back to Invoices
+          </button>
           <h1>Invoice {{ invoice.number }}</h1>
           <p class="subtitle">Issued on {{ formatDate(invoice.date) }}</p>
           <div class="org-context">
@@ -271,6 +275,10 @@ const deleteItem = (index) => {
   }
 }
 
+const goBack = () => {
+  router.push('/invoices')
+}
+
 onMounted(() => {
 
 })
@@ -307,6 +315,32 @@ onMounted(() => {
 
 .subtitle {
   color: #6b7280;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: #f9fafb;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.back-btn i {
+  font-size: 0.875rem;
 }
 
 .invoice-header {

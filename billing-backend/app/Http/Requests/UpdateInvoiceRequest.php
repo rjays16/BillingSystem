@@ -28,7 +28,7 @@ class UpdateInvoiceRequest extends FormRequest
             'vendor_id' => 'sometimes|required|exists:vendors,id',
             'number' => 'sometimes|required|string|max:255|unique:invoices,number,' . $invoiceId,
             'amount' => 'sometimes|required|numeric|min:0.01|max:999999999.99',
-            'status' => 'required|in:Pending,Paid,Overdue,Cancelled',
+            'status' => 'required|in:draft,sent,paid,overdue,cancelled',
             'date' => 'sometimes|required|date',
             'due_date' => 'nullable|date|after_or_equal:date',
             'notes' => 'nullable|string|max:2000',
