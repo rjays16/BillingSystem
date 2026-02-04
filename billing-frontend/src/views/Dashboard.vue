@@ -1,6 +1,27 @@
 <template>
   <AppLayout>
     <div class="dashboard-wrapper">
+      <!-- Access Denied Alert -->
+      <div v-if="showAccessDenied" class="access-denied-alert">
+        <i class="bi bi-shield-exclamation"></i>
+        <div>
+          <h3>Access Denied</h3>
+          <p>You don't have permission to access that page.</p>
+          <p class="allowed-features">
+            As a <strong>{{ authStore.userRole.replace('_', ' ') }}</strong>, you can access:
+          </p>
+          <ul class="allowed-list">
+            <li v-if="authStore.canAccessDashboard">Dashboard</li>
+            <li v-if="authStore.canAccessUsers">User Management</li>
+            <li v-if="authStore.canAccessVendors">Vendors</li>
+            <li v-if="authStore.canAccessInvoices">Invoices</li>
+          </ul>
+          <button @click="dismissAlert" class="btn-dismiss">
+            Got it
+          </button>
+        </div>
+      </div>
+
       <header class="dashboard-header">
         <div>
           <h1>Dashboard</h1>

@@ -7,23 +7,38 @@
       </div>
 
       <nav class="nav">
-        <RouterLink to="/dashboard" class="nav-link" active-class="active">
+        <RouterLink 
+          v-if="authStore.canAccessDashboard" 
+          to="/dashboard" 
+          class="nav-link" 
+          active-class="active"
+        >
           <i class="bi bi-speedometer2"></i>
           <span v-if="!collapsed">Dashboard</span>
         </RouterLink>
 
-        <RouterLink to="/vendors" class="nav-link" active-class="active">
+        <RouterLink 
+          v-if="authStore.canAccessVendors" 
+          to="/vendors" 
+          class="nav-link" 
+          active-class="active"
+        >
           <i class="bi bi-people"></i>
           <span v-if="!collapsed">Vendors</span>
         </RouterLink>
 
-        <RouterLink to="/invoices" class="nav-link" active-class="active">
+        <RouterLink 
+          v-if="authStore.canAccessInvoices" 
+          to="/invoices" 
+          class="nav-link" 
+          active-class="active"
+        >
           <i class="bi bi-file-earmark-text"></i>
           <span v-if="!collapsed">Invoices</span>
         </RouterLink>
 
         <RouterLink 
-          v-if="authStore.isAdmin" 
+          v-if="authStore.canAccessUsers" 
           to="/users" 
           class="nav-link" 
           active-class="active"

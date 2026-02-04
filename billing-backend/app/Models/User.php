@@ -61,4 +61,44 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Organization::class);
     }
+
+    /**
+     * Check if user is super admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is accountant
+     */
+    public function isAccountant(): bool
+    {
+        return $this->role === 'accountant';
+    }
+
+    /**
+     * Get all valid roles
+     */
+    public static function getValidRoles(): array
+    {
+        return ['super_admin', 'admin', 'accountant'];
+    }
+
+    /**
+     * Check if role is valid
+     */
+    public static function isValidRole(string $role): bool
+    {
+        return in_array($role, self::getValidRoles());
+    }
 }

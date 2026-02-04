@@ -13,8 +13,14 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAdmin: (state) => state.user?.role === 'admin',
     isAccountant: (state) => state.user?.role === 'accountant',
+    isSuperAdmin: (state) => state.user?.role === 'super_admin',
     userRole: (state) => state.user?.role || 'guest',
     userName: (state) => state.user?.name || '',
+    canAccessDashboard: (state) => ['super_admin', 'admin', 'accountant'].includes(state.user?.role),
+    canAccessUsers: (state) => ['super_admin', 'admin'].includes(state.user?.role),
+    canAccessVendors: (state) => ['admin', 'accountant'].includes(state.user?.role),
+    canAccessInvoices: (state) => ['admin', 'accountant'].includes(state.user?.role),
+    canAccessSettings: (state) => ['admin', 'accountant'].includes(state.user?.role),
     userAvatar: (state) => {
       if (!state.user?.name) return '?'
       return state.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)

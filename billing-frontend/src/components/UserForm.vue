@@ -68,6 +68,7 @@
             @change="onInputChange('role')"
           >
             <option value="">Select a role</option>
+            <option value="super_admin">Super Admin</option>
             <option value="admin">Admin</option>
             <option value="accountant">Accountant</option>
           </select>
@@ -209,7 +210,7 @@ const validateField = (field) => {
     case 'role':
       if (!form.value.role) {
         errors.value.role = 'Role is required'
-      } else if (!['admin', 'accountant'].includes(form.value.role)) {
+      } else if (!['super_admin', 'admin', 'accountant'].includes(form.value.role)) {
         errors.value.role = 'Please select a valid role'
       } else {
         errors.value.role = ''
@@ -273,7 +274,7 @@ const onInputChange = (field) => {
   }
   
   if (field === 'role' && form.value.role) {
-    if (!['admin', 'accountant'].includes(form.value.role)) {
+    if (!['super_admin', 'admin', 'accountant'].includes(form.value.role)) {
       errors.value.role = 'Please select a valid role'
     }
   }

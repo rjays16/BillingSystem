@@ -31,7 +31,7 @@ const routes = [
     component: Dashboard,
     meta: { 
       requiresAuth: true,
-      roles: ['admin', 'accountant']
+      roles: ['super_admin', 'admin', 'accountant']
     },
   },
   {
@@ -76,7 +76,7 @@ const routes = [
     component: Users,
     meta: { 
       requiresAuth: true,
-      roles: ['admin']
+      roles: ['super_admin', 'admin']
     },
   },
   {
@@ -110,6 +110,7 @@ router.beforeEach((to, from, next) => {
   authStore.initializeAuth()
 
   const isAuthenticated = authStore.isAuthenticated
+  const userRole = authStore.userRole
 
   if (to.meta.guestOnly && isAuthenticated) {
     return next('/dashboard')
@@ -117,6 +118,10 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     return next('/login')
+  }
+
+  if (to.meta.roles && !to.meta.roles.includes(userRole)) {
+    return next('/dashboard?access_denied=true')
   }
 
   next()

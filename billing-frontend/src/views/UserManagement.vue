@@ -40,7 +40,7 @@
             <td>{{ user.email }}</td>
             <td>
               <span class="role-badge" :class="user.role">
-                {{ user.role }}
+                {{ formatRole(user.role) }}
               </span>
             </td>
             <td>
@@ -106,6 +106,10 @@ import { ref, computed, onMounted } from 'vue'
  const userStore = useUserStore()
  const { show } = useToast()
 const allUsers = ref([])
+const selectedUser = ref(null)
+const showUserForm = ref(false)
+const showConfirm = ref(false)
+const userToDelete = ref(null)
 
 const organizationUsers = computed(() => {
   if (!organizationStore.currentOrganization) return []
@@ -125,6 +129,7 @@ onMounted(async () => {
 })
 
 const getUserAvatar = (name) => {
+  if (!name) return 'U'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
@@ -199,6 +204,15 @@ const cancelDeleteUser = () => {
 const getOrganizationName = (orgId) => {
   const org = organizationStore.getOrganizationById(orgId)
   return org ? org.name : 'Unknown Organization'
+}
+
+const formatRole = (role) => {
+  const roleMap = {
+    'super_admin': 'Super Admin',
+    'admin': 'Admin',
+    'accountant': 'Accountant'
+  }
+  return roleMap[role] || role
 }
 </script>
 
@@ -300,6 +314,11 @@ const getOrganizationName = (orgId) => {
   text-transform: capitalize;
 }
 
+.role-badge.super_admin {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
 .role-badge.admin {
   background: #dcfce7;
   color: #166534;
@@ -343,6 +362,15 @@ const getOrganizationName = (orgId) => {
 .btn-action:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.edit-btn {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.edit-btn:hover {
+  background: #bfdbfe;
 }
 
 .danger-btn {

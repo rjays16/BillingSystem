@@ -156,7 +156,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationStore } from '../stores/organization'
-import { vendors } from '../data/mockData'
 
 const route = useRoute()
 const router = useRouter()
@@ -197,18 +196,15 @@ const canAccessInvoice = computed(() => {
 })
 
 const getVendorName = (vendorId) => {
-  const vendor = vendors.find(v => v.id === vendorId)
-  return vendor ? vendor.name : 'Unknown Vendor'
+  return 'Vendor Loading...'
 }
 
 const getVendorEmail = (vendorId) => {
-  const vendor = vendors.find(v => v.id === vendorId)
-  return vendor ? vendor.email : 'N/A'
+  return 'N/A'
 }
 
 const getVendorPhone = (vendorId) => {
-  const vendor = vendors.find(v => v.id === vendorId)
-  return vendor ? vendor.phone : 'N/A'
+  return 'N/A'
 }
 
 const getOrganizationName = (orgId) => {

@@ -1,9 +1,38 @@
 <template>
   <AppLayout>
-    <div v-if="vendor" class="vendor-view">
-      <div v-if="!vendor.invoices" class="loading-state">
-        <i class="bi bi-arrow-repeat"></i>
-        <span>Loading vendor data...</span>
+    <div v-if="!canAccessVendor" class="access-denied">
+      <i class="bi bi-shield-x"></i>
+      <h2>Access Denied</h2>
+      <p>You don't have permission to view this vendor.</p>
+    </div>
+
+    <div v-else-if="loading" class="loading-state">
+      <div class="loader"></div>
+      <p>Loading vendor data...</p>
+    </div>
+
+    <div v-else-if="!vendor" class="not-found">
+      <i class="bi bi-search"></i>
+      <h2>Vendor Not Found</h2>
+      <p>The vendor you're looking for doesn't exist or you don't have access to view it.</p>
+      <button @click="router.push('/vendors')" class="btn primary">
+        Back to Vendors
+      </button>
+    </div>
+
+    <div v-else>
+      <div class="vendor-header">
+        <div class="vendor-info">
+          <h1>{{ vendor.name || 'Unknown Vendor' }}</h1>
+          <p class="subtitle">{{ vendor.email || 'No email available' }}</p>
+        </div>
+
+        <span
+          class="status-badge"
+          :class="vendor.status ? vendor.status.toLowerCase() : 'active'"
+        >
+          {{ vendor.status || 'Active' }}
+        </span>
       </div>
       <div class="vendor-header">
         <div class="vendor-info">
@@ -41,7 +70,7 @@
             <i class="bi bi-receipt"></i>
             Total Invoices
           </h4>
-          <p>{{ vendor.invoices.length }}</p>
+          <p>{{ vendorInvoices.length }}</p>
         </div>
 
         <div class="info-card">
@@ -96,12 +125,12 @@
             </thead>
 
             <tbody>
-              <tr v-if="vendor.invoices.length === 0">
+              <tr v-if="vendorInvoices.length === 0">
                 <td colspan="4" class="empty">No invoices found for this vendor</td>
               </tr>
               
               <tr
-                v-for="invoice in vendor.invoices"
+                v-for="invoice in vendorInvoices"
                 :key="invoice.id"
                 class="invoice-row"
               >
@@ -126,38 +155,35 @@
         </div>
       </div>
     </div>
+    </div>
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { vendors, invoices } from '../data/mockData'
 import { useToast } from '../composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
 const { show } = useToast()
 
-const getVendorById = (id) => {
+const vendor = ref(null)
+const vendorInvoices = ref([])
+const loading = ref(true)
+
+const loadVendorData = async () => {
   try {
-    return vendors.find(v => v.id === parseInt(id))
+    // TODO: Implement API calls to fetch vendor and invoice data
+    // For now, set vendor to null to indicate loading from API
+    vendor.value = null
+    vendorInvoices.value = []
   } catch (error) {
-    console.error('Error finding vendor:', error)
-    return null
+    console.error('Error loading vendor data:', error)
+  } finally {
+    loading.value = false
   }
 }
-
-const getVendorInvoices = (vendorId) => {
-  try {
-    return invoices.filter(inv => inv.vendorId === vendorId)
-  } catch (error) {
-    console.error('Error getting invoices:', error)
-    return []
-  }
-}
-
-const vendor = ref(getVendorById(route.params.id))
 
 if (vendor.value) {
   vendor.value.invoices = getVendorInvoices(vendor.value.id)
@@ -166,8 +192,8 @@ if (vendor.value) {
 
 const paidInvoices = computed(() => {
   try {
-    if (!vendor.value?.invoices?.length) return 0
-    return vendor.value.invoices.filter(inv => inv.status === 'Paid').length || 0
+    if (!vendorInvoices.value?.length) return 0
+    return vendorInvoices.value.filter(inv => inv.status === 'Paid').length || 0
   } catch (error) {
     console.error('Error computing paid invoices:', error)
     return 0
@@ -176,8 +202,8 @@ const paidInvoices = computed(() => {
 
 const pendingInvoices = computed(() => {
   try {
-    if (!vendor.value?.invoices?.length) return 0
-    return vendor.value.invoices.filter(inv => inv.status === 'Pending').length || 0
+    if (!vendorInvoices.value?.length) return 0
+    return vendorInvoices.value.filter(inv => inv.status === 'Pending').length || 0
   } catch (error) {
     console.error('Error computing pending invoices:', error)
     return 0
@@ -186,8 +212,8 @@ const pendingInvoices = computed(() => {
 
 const overdueInvoices = computed(() => {
   try {
-    if (!vendor.value?.invoices?.length) return 0
-    return vendor.value.invoices.filter(inv => inv.status === 'Overdue').length || 0
+    if (!vendorInvoices.value?.length) return 0
+    return vendorInvoices.value.filter(inv => inv.status === 'Overdue').length || 0
   } catch (error) {
     console.error('Error computing overdue invoices:', error)
     return 0
@@ -196,8 +222,8 @@ const overdueInvoices = computed(() => {
 
 const totalRevenue = computed(() => {
   try {
-    if (!vendor.value?.invoices?.length) return 0
-    return vendor.value.invoices
+    if (!vendorInvoices.value?.length) return 0
+    return vendorInvoices.value
       .filter(inv => inv.status === 'Paid')
       .reduce((sum, inv) => sum + inv.amount, 0)
   } catch (error) {
@@ -224,9 +250,7 @@ const deleteInvoice = (invoice) => {
 }
 
 onMounted(() => {
-  if (vendor.value) {
-    vendor.value.invoices = getVendorInvoices(vendor.value.id)
-  }
+  loadVendorData()
 })
 
 onBeforeUnmount(() => {
@@ -239,6 +263,49 @@ onBeforeUnmount(() => {
   padding: 2.5rem 3rem;
   background: #f8fafc;
   font-family: 'Inter', system-ui, sans-serif;
+}
+
+.loading-state,
+.not-found {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  margin: 2rem 0;
+}
+
+.loading-state i,
+.not-found i {
+  font-size: 3rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.loading-state h2,
+.not-found h2 {
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.loading-state p,
+.not-found p {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.loader {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .vendor-header {
