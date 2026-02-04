@@ -23,19 +23,6 @@
     <div v-else>
       <div class="vendor-header">
         <div class="vendor-info">
-          <h1>{{ vendor.name || 'Unknown Vendor' }}</h1>
-          <p class="subtitle">{{ vendor.email || 'No email available' }}</p>
-        </div>
-
-        <span
-          class="status-badge"
-          :class="vendor.status ? vendor.status.toLowerCase() : 'active'"
-        >
-          {{ vendor.status || 'Active' }}
-        </span>
-      </div>
-      <div class="vendor-header">
-        <div class="vendor-info">
           <h1>{{ vendor.name }}</h1>
           <p class="subtitle">{{ vendor.email }}</p>
         </div>
@@ -86,7 +73,7 @@
             <i class="bi bi-calendar-check"></i>
             Created Date
           </h4>
-          <p>{{ vendor.createdDate || 'N/A' }}</p>
+          <p>{{ formatDate(vendor.created_at) }}</p>
         </div>
       </div>
 
@@ -126,7 +113,7 @@
 
             <tbody>
               <tr v-if="vendorInvoices.length === 0">
-                <td colspan="4" class="empty">No invoices found for this vendor</td>
+                <td colspan="5" class="empty">No invoices found for this vendor</td>
               </tr>
               
               <tr
@@ -144,7 +131,7 @@
                     {{ invoice.status }}
                   </span>
                 </td>
-                <td @click="goToInvoice(invoice.id)" class="clickable">{{ invoice.date }}</td>
+                <td @click="goToInvoice(invoice.id)" class="clickable">{{ formatDate(invoice.date) }}</td>
                 <td class="actions">
                   <button @click="editInvoice(invoice)" class="edit-btn">Edit</button>
                   <button @click="deleteInvoice(invoice)" class="delete-btn">Delete</button>
@@ -155,45 +142,66 @@
         </div>
       </div>
     </div>
-    </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast'
+import { useVendorStore } from '../stores/vendor'
+import { apiEndpoints } from '../services/api'
+import AppLayout from '../layouts/AppLayout.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { show } = useToast()
+const vendorStore = useVendorStore()
 
 const vendor = ref(null)
 const vendorInvoices = ref([])
 const loading = ref(true)
+const canAccessVendor = ref(true)
 
 const loadVendorData = async () => {
+  loading.value = true
+  
   try {
-    // TODO: Implement API calls to fetch vendor and invoice data
-    // For now, set vendor to null to indicate loading from API
-    vendor.value = null
-    vendorInvoices.value = []
+    const vendorId = route.params.id
+    const result = await vendorStore.getVendor(vendorId)
+    
+    if (result.success) {
+      vendor.value = result.data
+    } else {
+      canAccessVendor.value = false
+    }
+    
+    const invoicesResponse = await apiEndpoints.getInvoices()
+    vendorInvoices.value = invoicesResponse.data.data.filter(
+      inv => inv.vendor_id === Number(vendorId)
+    )
+    
   } catch (error) {
     console.error('Error loading vendor data:', error)
+    canAccessVendor.value = false
   } finally {
     loading.value = false
   }
 }
 
-if (vendor.value) {
-  vendor.value.invoices = getVendorInvoices(vendor.value.id)
+const formatDate = (date) => {
+  if (!date) return 'N/A'
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
 }
-
 
 const paidInvoices = computed(() => {
   try {
     if (!vendorInvoices.value?.length) return 0
-    return vendorInvoices.value.filter(inv => inv.status === 'Paid').length || 0
+    return vendorInvoices.value.filter(inv => inv.status === 'paid').length || 0
   } catch (error) {
     console.error('Error computing paid invoices:', error)
     return 0
@@ -203,7 +211,7 @@ const paidInvoices = computed(() => {
 const pendingInvoices = computed(() => {
   try {
     if (!vendorInvoices.value?.length) return 0
-    return vendorInvoices.value.filter(inv => inv.status === 'Pending').length || 0
+    return vendorInvoices.value.filter(inv => inv.status === 'sent').length || 0
   } catch (error) {
     console.error('Error computing pending invoices:', error)
     return 0
@@ -213,7 +221,7 @@ const pendingInvoices = computed(() => {
 const overdueInvoices = computed(() => {
   try {
     if (!vendorInvoices.value?.length) return 0
-    return vendorInvoices.value.filter(inv => inv.status === 'Overdue').length || 0
+    return vendorInvoices.value.filter(inv => inv.status === 'overdue').length || 0
   } catch (error) {
     console.error('Error computing overdue invoices:', error)
     return 0
@@ -224,8 +232,8 @@ const totalRevenue = computed(() => {
   try {
     if (!vendorInvoices.value?.length) return 0
     return vendorInvoices.value
-      .filter(inv => inv.status === 'Paid')
-      .reduce((sum, inv) => sum + inv.amount, 0)
+      .filter(inv => inv.status === 'paid')
+      .reduce((sum, inv) => sum + Number(inv.amount), 0)
   } catch (error) {
     console.error('Error computing total revenue:', error)
     return 0
@@ -243,30 +251,28 @@ const editInvoice = (invoice) => {
   }, 100)
 }
 
-const deleteInvoice = (invoice) => {
+const deleteInvoice = async (invoice) => {
   if (confirm(`Are you sure you want to delete ${invoice.number}?`)) {
-    show('Invoice deleted successfully', 'success')
+    try {
+      await apiEndpoints.deleteInvoice(invoice.id)
+      vendorInvoices.value = vendorInvoices.value.filter(inv => inv.id !== invoice.id)
+      show('Invoice deleted successfully', 'success')
+    } catch (error) {
+      console.error('Error deleting invoice:', error)
+      show('Failed to delete invoice', 'error')
+    }
   }
 }
 
 onMounted(() => {
   loadVendorData()
 })
-
-onBeforeUnmount(() => {
-})
 </script>
 
 <style scoped>
-.vendor-view {
-  min-height: 100vh;
-  padding: 2.5rem 3rem;
-  background: #f8fafc;
-  font-family: 'Inter', system-ui, sans-serif;
-}
-
 .loading-state,
-.not-found {
+.not-found,
+.access-denied {
   text-align: center;
   padding: 4rem 2rem;
   background: #ffffff;
@@ -276,20 +282,23 @@ onBeforeUnmount(() => {
 }
 
 .loading-state i,
-.not-found i {
+.not-found i,
+.access-denied i {
   font-size: 3rem;
   color: #6b7280;
   margin-bottom: 1rem;
 }
 
 .loading-state h2,
-.not-found h2 {
+.not-found h2,
+.access-denied h2 {
   color: #111827;
   margin-bottom: 0.5rem;
 }
 
 .loading-state p,
-.not-found p {
+.not-found p,
+.access-denied p {
   color: #6b7280;
   margin-bottom: 1.5rem;
 }
@@ -329,9 +338,9 @@ onBeforeUnmount(() => {
 }
 
 .status-badge {
-  padding: 0.25rem 0.75rem;
+  padding: 0.5rem 1rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-transform: capitalize;
 }
@@ -427,6 +436,7 @@ onBeforeUnmount(() => {
   padding: 0.75rem 1rem;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+  text-align: center;
 }
 
 .stat-value {
@@ -437,14 +447,17 @@ onBeforeUnmount(() => {
 }
 
 .stat-label {
+  display: block;
   font-size: 0.75rem;
   color: #6b7280;
+  margin-top: 0.25rem;
 }
 
 .table-wrapper {
   margin-top: 1.5rem;
   border-radius: 14px;
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 .invoice-table {
@@ -461,16 +474,19 @@ onBeforeUnmount(() => {
 
 .invoice-table thead {
   background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .invoice-table tbody tr {
-  cursor: pointer;
   transition: background 0.15s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.invoice-table tbody tr:last-child {
+  border-bottom: none;
 }
 
 .invoice-table tbody tr:hover {
-  background: #f3f4f6;
+  background: #f9fafb;
 }
 
 .invoice-row td.clickable {
@@ -478,10 +494,12 @@ onBeforeUnmount(() => {
 }
 
 .status {
-  padding: 0.25rem 0.75rem;
+  padding: 0.375rem 0.875rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-transform: capitalize;
+  display: inline-block;
 }
 
 .status.paid {
@@ -489,22 +507,27 @@ onBeforeUnmount(() => {
   color: #166534;
 }
 
-.status.pending {
-  background: #fef9c3;
-  color: #854d0e;
+.status.sent {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status.draft {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .status.overdue {
   background: #fee2e2;
   color: #991b1b;
-  border: 1px solid #fecaca;
   position: relative;
+  padding-left: 1.5rem;
 }
 
 .status.overdue::before {
   content: '!';
   position: absolute;
-  left: -6px;
+  left: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
   background: #991b1b;
@@ -519,25 +542,37 @@ onBeforeUnmount(() => {
   font-weight: bold;
 }
 
+.status.cancelled {
+  background: #f3f4f6;
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;
 }
 
-.edit-btn {
-  font-size: 0.8rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
-
+.edit-btn,
 .delete-btn {
   font-size: 0.8rem;
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
   border: none;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-btn {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.edit-btn:hover {
+  background: #e5e7eb;
+}
+
+.delete-btn {
   background: #fee2e2;
   color: #991b1b;
 }
@@ -550,41 +585,25 @@ onBeforeUnmount(() => {
   text-align: center;
   padding: 2rem;
   color: #9ca3af;
+  font-style: italic;
 }
 
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  background: #f9fafb;
-  border-radius: 14px;
-  border: 1px solid #e5e7eb;
+.btn.primary {
+  background: #111827;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease;
 }
 
-.loading-state i {
-  font-size: 1.5rem;
-  color: #667eea;
-  animation: spin 1s linear infinite;
+.btn.primary:hover {
+  background: #1f2937;
 }
 
-.loading-state span {
-  margin-left: 0.75rem;
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Responsive Design */
 @media (max-width: 768px) {
-  .vendor-view {
-    padding: 2rem 1.5rem;
-  }
-  
   .vendor-header {
     flex-direction: column;
     gap: 1rem;
@@ -595,21 +614,6 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
   
-  .invoice-stats {
-    flex-wrap: wrap;
-  }
-  
-  .invoice-table th:nth-child(4),
-  .invoice-table td:nth-child(4) {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .vendor-view {
-    padding: 1.5rem 1rem;
-  }
-  
   .section-header {
     flex-direction: column;
     gap: 1rem;
@@ -617,14 +621,13 @@ onBeforeUnmount(() => {
   }
   
   .invoice-stats {
-    flex-direction: column;
-    gap: 0.75rem;
+    width: 100%;
+    justify-content: space-between;
   }
   
-  .invoice-table th,
-  .invoice-table td {
-    padding: 0.75rem 0.5rem;
-    font-size: 0.85rem;
+  .invoice-table th:nth-child(4),
+  .invoice-table td:nth-child(4) {
+    display: none;
   }
 }
 </style>
