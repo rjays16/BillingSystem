@@ -45,6 +45,14 @@ class UserRepository extends BaseRepository implements UserRepositoryInterface
         return User::where('organization_id', $organizationId)->get();
     }
 
+    /**
+     * Get users for current authenticated user's organization
+     */
+    public function forCurrentTenant(): Collection
+    {
+        return User::all();
+    }
+
     public function findByIdForTenant(int $id, int $organizationId): ?User
     {
         return User::where('organization_id', $organizationId)->find($id);

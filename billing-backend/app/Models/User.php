@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Auth;
 
 class User extends Authenticatable
 {
@@ -55,6 +56,19 @@ class User extends Authenticatable
     public function scopeForTenant($query, $organizationId)
     {
         return $query->where('organization_id', $organizationId);
+    }
+
+    /**
+     * Boot the model to automatically apply tenant scope
+     */
+    protected static function booted()
+    {
+        static::addGlobalScope('tenant', function ($builder) {
+            if (Auth::check()) {
+                return $builder->where('organization_id', Auth::user()->organization_id);
+            }
+            return $builder;
+        });
     }
 
     public function organization()

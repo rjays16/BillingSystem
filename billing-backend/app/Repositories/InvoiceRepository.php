@@ -30,11 +30,19 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
 
     public function findByTenantAndStatus(int $organizationId, string $status): Collection
     {
-        return $this->model->forTenant($organizationId)
+        return $this->model->where('organization_id', $organizationId)
             ->byStatus($status)
             ->with('vendor')
             ->orderBy('created_at', 'desc')
             ->get();
+    }
+
+    /**
+     * Get invoices for current authenticated user's organization
+     */
+    public function forCurrentTenant(): Collection
+    {
+        return $this->model->all();
     }
 
     public function findForTenant(int $id, int $organizationId): ?object

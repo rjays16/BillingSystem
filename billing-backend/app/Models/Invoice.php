@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Auth;
 
 class Invoice extends Model
 {
@@ -32,6 +33,19 @@ class Invoice extends Model
     public function scopeForTenant($query, $organizationId)
     {
         return $query->where('organization_id', $organizationId);
+    }
+
+    /**
+     * Boot the model to automatically apply tenant scope
+     */
+    protected static function booted()
+    {
+        static::addGlobalScope('tenant', function ($builder) {
+            if (Auth::check()) {
+                return $builder->where('organization_id', Auth::user()->organization_id);
+            }
+            return $builder;
+        });
     }
 
     /**

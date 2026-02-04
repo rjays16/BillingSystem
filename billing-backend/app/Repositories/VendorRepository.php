@@ -58,6 +58,14 @@ class VendorRepository implements VendorRepositoryInterface
         return $this->model->where('organization_id', $organizationId)->get();
     }
 
+    /**
+     * Get vendors for current authenticated user's organization
+     */
+    public function forCurrentTenant(): Collection
+    {
+        return $this->model->all();
+    }
+
     public function findByIdForTenant(int $id, int $organizationId): ?Vendor
     {
         return $this->model->where('organization_id', $organizationId)->find($id);

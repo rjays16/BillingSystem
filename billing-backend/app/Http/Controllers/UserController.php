@@ -6,24 +6,24 @@ use App\Http\Resources\UserResource;
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
 use App\Repositories\Interfaces\UserRepositoryInterface;
+use App\Services\UserService;
+use App\Services\TenantService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class UserController extends Controller
 {
-    protected $userRepository;
-
-    public function __construct(UserRepositoryInterface $userRepository)
-    {
-        $this->userRepository = $userRepository;
-    }
+    public function __construct(
+        private UserService $userService,
+        private TenantService $tenantService
+    ) {}
 
     /**
      * Display a listing of users for the current organization.
      */
     public function index(Request $request): JsonResponse
     {
-        $users = $this->userRepository->forTenant($request->user()->organization_id);
+        $users = $this->userService->getUsersByCurrentTenant();
         
         return response()->json([
             'success' => true,
@@ -38,7 +38,7 @@ class UserController extends Controller
     {
         $validated = $request->validated();
         
-        $user = $this->userRepository->createForTenant(
+        $user = $this->userService->createWithOrganization(
             $validated,
             $request->user()->organization_id
         );
@@ -55,7 +55,7 @@ class UserController extends Controller
      */
     public function show(Request $request, int $id): JsonResponse
     {
-        $user = $this->userRepository->findByIdForTenant($id, $request->user()->organization_id);
+        $user = $this->userService->findByIdForTenant($id, $request->user()->organization_id);
         
         if (!$user) {
             return response()->json([
@@ -77,12 +77,7 @@ class UserController extends Controller
     {
         $validated = $request->validated();
         
-        // Hash password if provided
-        if (isset($validated['password'])) {
-            $validated['password'] = bcrypt($validated['password']);
-        }
-
-        $user = $this->userRepository->updateForTenant($id, $request->user()->organization_id, $validated);
+        $user = $this->userService->updateUser($id, $validated, $request->user()->organization_id);
         
         if (!$user) {
             return response()->json([
@@ -103,7 +98,7 @@ class UserController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $deleted = $this->userRepository->deleteForTenant($id, $request->user()->organization_id);
+        $deleted = $this->userService->deleteUserFromTenant($id, $request->user()->organization_id);
         
         if (!$deleted) {
             return response()->json([
